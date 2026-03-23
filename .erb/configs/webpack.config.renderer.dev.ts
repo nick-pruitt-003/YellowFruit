@@ -41,19 +41,12 @@ const configuration: webpack.Configuration = {
 
   target: ['web', 'electron-renderer'],
 
-  entry: [
-    `webpack-dev-server/client?http://localhost:${port}/dist`,
-    'webpack/hot/only-dev-server',
-    path.join(webpackPaths.srcRendererPath, 'index.tsx'),
-  ],
+  entry: [path.join(webpackPaths.srcRendererPath, 'index.tsx')],
 
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: '/',
     filename: 'renderer.dev.js',
-    library: {
-      type: 'umd',
-    },
   },
 
   module: rendererDevModule,
@@ -109,7 +102,7 @@ const configuration: webpack.Configuration = {
   devServer: {
     port,
     compress: true,
-    hot: true,
+    hot: 'only',
     headers: { 'Access-Control-Allow-Origin': '*' },
     static: {
       publicPath: '/',
