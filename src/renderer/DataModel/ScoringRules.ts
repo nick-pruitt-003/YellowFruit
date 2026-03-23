@@ -202,6 +202,7 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
     this.maximumPartsPerBonus = 3;
     this.pointsPerBonusPart = 10;
     this.lightningCountPerTeam = 0;
+    this.lightningDivisor = 10;
   }
 
   toFileObject(qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjScoringRules {

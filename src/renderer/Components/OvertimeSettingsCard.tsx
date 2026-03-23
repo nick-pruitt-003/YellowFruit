@@ -37,7 +37,7 @@ function OvertimeSettingsCard() {
   const numPlayersIsValid = () => {
     if (minTossups === '') return false;
     const parsed = parseFloat(minTossups);
-    return ScoringRules.validateMaxPlayerCount(parsed);
+    return ScoringRules.validateMinOvertimeTuCount(parsed);
   };
 
   const saveMinTossupsSetting = () => {
