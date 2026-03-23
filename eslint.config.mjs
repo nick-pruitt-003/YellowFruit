@@ -10,6 +10,7 @@ export default tseslint.config(
       'release/app/dist',
       'release/build',
       '.erb/dll',
+      '**/*.d.ts',
       '**/*.css.d.ts',
       '**/*.sass.d.ts',
       '**/*.scss.d.ts',

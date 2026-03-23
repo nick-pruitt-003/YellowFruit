@@ -26,6 +26,7 @@ export const FileSwitchActionNames = {
   [FileSwitchActions.NewFile]: 'New File',
   [FileSwitchActions.OpenYftFile]: 'Open File',
   [FileSwitchActions.CloseApp]: 'Exit YellowFruit',
+  [FileSwitchActions.ImportQbjTournament]: 'Import QBJ Tournament',
 };
 
 export interface IYftBackupFile {

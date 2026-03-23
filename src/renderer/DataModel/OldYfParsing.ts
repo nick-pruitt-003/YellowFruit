@@ -386,7 +386,7 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
     leftOtBuzzes.find((pac) => pac.answerType.value > 10)?.addToCount(g.otPwr1);
     leftOtBuzzes.find((pac) => pac.answerType.value === 10)?.addToCount(g.otTen1);
     leftOtBuzzes.find((pac) => pac.answerType.value === -5)?.addToCount(g.otNeg1);
-    const rightOtBuzzes = leftMatchTeam.overTimeBuzzes;
+    const rightOtBuzzes = rightMatchTeam.overTimeBuzzes;
     rightOtBuzzes.find((pac) => pac.answerType.value > 10)?.addToCount(g.otPwr2);
     rightOtBuzzes.find((pac) => pac.answerType.value === 10)?.addToCount(g.otTen2);
     rightOtBuzzes.find((pac) => pac.answerType.value === -5)?.addToCount(g.otNeg2);

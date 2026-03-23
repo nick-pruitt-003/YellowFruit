@@ -1,5 +1,5 @@
 {
-  "name": "YellowFruit",
+  "name": "yellowfruit",
   "version": "4.0.17",
   "description": "Quiz bowl statkeeping application",
   "license": "AGPL-3.0-or-later",
@@ -12,5 +12,8 @@
     "postinstall": "npm run rebuild && npm run link-modules",
     "link-modules": "tsx ../../.erb/scripts/link-modules.ts"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "*"
+  }
 }

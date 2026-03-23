@@ -192,7 +192,7 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     this.scorekeeper = source.scorekeeper;
     this.serial = source.serial;
     this.notes = source.notes;
-    this.matchQuestions = this.matchQuestions.map((mq) => mq.makeCopy());
+    this.matchQuestions = source.matchQuestions.map((mq) => mq.makeCopy());
     this.statsValidity = source.statsValidity;
     this.importedFile = source.importedFile;
 

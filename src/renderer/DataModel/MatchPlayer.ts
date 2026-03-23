@@ -91,7 +91,7 @@ export class MatchPlayer implements IQbjMatchPlayer, IYftDataModelObject {
 
   /** Does this player have any tossup stats at all? */
   anyStatsEntered() {
-    return !!this.answerCounts.find((ac) => !!ac.number);
+    return !!this.answerCounts.find((ac) => ac.number !== undefined);
   }
 
   getTotalBuzzes(positiveOnly: boolean = false) {

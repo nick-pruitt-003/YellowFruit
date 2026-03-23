@@ -2,7 +2,7 @@ import { sumReduce, versionLt } from '../Utils/GeneralUtils';
 // eslint-disable-next-line import/no-cycle
 import { NullDate, NullObjects } from '../Utils/UtilTypes';
 // eslint-disable-next-line import/no-cycle
-import HtmlReportGenerator from './HTMLReports';
+import type HtmlReportGenerator from './HTMLReports';
 import { IQbjObject, IQbjRefPointer, IYftDataModelObject, IYftFileObject } from './Interfaces';
 import { Match } from './Match';
 import { IQbjPhase, Phase, PhaseTypes } from './Phase';
@@ -130,7 +130,7 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
 
   finalRankingsReady: boolean = false;
 
-  htmlGenerator: HtmlReportGenerator;
+  private _htmlGenerator?: HtmlReportGenerator;
 
   appVersion: string = '';
 
@@ -143,7 +143,14 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
     }
     this.tournamentSite = new TournamentSite();
     this.scoringRules = new ScoringRules();
-    this.htmlGenerator = new HtmlReportGenerator(this);
+  }
+
+  private async getHtmlGenerator(): Promise<HtmlReportGenerator> {
+    if (!this._htmlGenerator) {
+      const { default: Cls } = await import('./HTMLReports');
+      this._htmlGenerator = new Cls(this);
+    }
+    return this._htmlGenerator;
   }
 
   toFileObject(qbjOnly = false, isTopLevel = true, isReferenced = false): IQbjTournament {
@@ -225,32 +232,33 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
     return playoffStats;
   }
 
-  setHtmlFilePrefix(prefix?: string) {
-    this.htmlGenerator.setFilePrefix(prefix);
+  async setHtmlFilePrefix(prefix?: string) {
+    const gen = await this.getHtmlGenerator();
+    gen.setFilePrefix(prefix);
   }
 
-  makeHtmlStandings() {
-    return this.htmlGenerator.generateStandingsPage();
+  async makeHtmlStandings() {
+    return (await this.getHtmlGenerator()).generateStandingsPage();
   }
 
-  makeHtmlIndividuals() {
-    return this.htmlGenerator.generateIndividualsPage();
+  async makeHtmlIndividuals() {
+    return (await this.getHtmlGenerator()).generateIndividualsPage();
   }
 
-  makeHtmlScoreboard() {
-    return this.htmlGenerator.generateScoreboardPage();
+  async makeHtmlScoreboard() {
+    return (await this.getHtmlGenerator()).generateScoreboardPage();
   }
 
-  makeHtmlTeamDetail() {
-    return this.htmlGenerator.generateTeamDetailPage();
+  async makeHtmlTeamDetail() {
+    return (await this.getHtmlGenerator()).generateTeamDetailPage();
   }
 
-  makeHtmlPlayerDetail() {
-    return this.htmlGenerator.generatePlayerDetailPage();
+  async makeHtmlPlayerDetail() {
+    return (await this.getHtmlGenerator()).generatePlayerDetailPage();
   }
 
-  makeHtmlRoundReport() {
-    return this.htmlGenerator.generateRoundReportPage();
+  async makeHtmlRoundReport() {
+    return (await this.getHtmlGenerator()).generateRoundReportPage();
   }
 
   /** Set the scoring rules for this tournament */
@@ -503,8 +511,8 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
     if (!this.canMovePhaseDown(phase)) return;
 
     const idx = this.phases.indexOf(phase);
-    const phaseToSwitchWith = this.phases[idx - 1];
-    this.phases[idx - 1] = phase;
+    const phaseToSwitchWith = this.phases[idx + 1];
+    this.phases[idx + 1] = phase;
     this.phases[idx] = phaseToSwitchWith;
   }
 

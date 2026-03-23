@@ -31,8 +31,7 @@ export interface IQbjPacket extends IQbjObject {
 export class Packet implements IQbjPacket, IYftDataModelObject {
   name: string = '';
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toFileObject(qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjPacket {
+  toFileObject(_qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjPacket {
     const qbjObject: IQbjPacket = {
       name: this.name,
     };

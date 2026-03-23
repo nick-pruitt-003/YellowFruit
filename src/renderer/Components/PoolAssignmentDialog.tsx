@@ -22,7 +22,7 @@ export default function PoolAssignmentDialog() {
   const [team] = useSubscription(modalManager.teamBeingAssigned);
   const [showNone] = useSubscription(modalManager.showNoneOption);
   const defaultOption = showNone ? PoolAssignmentModalManager.noneOptionKey : '';
-  const [selectedPool, setSeletedPool] = useSubscription(modalManager.selectedPool?.name || defaultOption);
+  const [selectedPool, setSelectedPool] = useSubscription(modalManager.selectedPool?.name || defaultOption);
   const canAccept = selectedPool !== '';
 
   const handleAccept = () => {
@@ -33,7 +33,7 @@ export default function PoolAssignmentDialog() {
   };
   const handleOptionChange = (option: string) => {
     modalManager.setSelectedPool(option);
-    setSeletedPool(option);
+    setSelectedPool(option);
   };
 
   useHotkeys('alt+c', () => handleCancel(), { enabled: isOpen, enableOnFormTags: true });

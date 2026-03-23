@@ -48,7 +48,7 @@ const SchedulePageHelpText: HelpTextSection[] = [
   {
     header: 'Templates',
     content: [
-      'YellowFruit has pre-configured templates for most common tournament formats. When you use a template, YellowFruit is aware of the structure of the tourmament and can use the stats for a given stage to determine which teams should qualify for which pools in the subsequent stage (this determination can be overridden if needed).',
+      'YellowFruit has pre-configured templates for most common tournament formats. When you use a template, YellowFruit is aware of the structure of the tournament and can use the stats for a given stage to determine which teams should qualify for which pools in the subsequent stage (this determination can be overridden if needed).',
     ],
   },
   {

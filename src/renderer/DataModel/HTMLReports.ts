@@ -1103,7 +1103,7 @@ export default class HtmlReportGenerator {
     if (noTopLink) return genericTagWithAttributes('div', [attrs], header, divider);
 
     const topLink = aTag(
-      `${this.fileNameForLink(whichPage)}${topAnchorID}`,
+      `${this.fileNameForLink(whichPage)}#${topAnchorID}`,
       genericTagWithAttributes('span', [classAttribute(cssClasses.smallText)], `${unicodeHTML('2191')}Top`),
     );
     return genericTagWithAttributes('div', [attrs], header, divider, genericTag('span', nbsp), topLink);
@@ -1175,7 +1175,7 @@ const cssClasses = {
   fwBelow800px: 'fwBelow800px',
 };
 
-const topAnchorID = '#top';
+const topAnchorID = 'top';
 
 /** id HTML attribute */
 function id(val: string) {

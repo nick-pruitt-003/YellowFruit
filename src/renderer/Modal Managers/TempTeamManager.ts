@@ -162,7 +162,7 @@ export class TempTeamManager {
       return regThatWasOpened;
     }
     const differentMatchingReg = allRegistrations.find((val) => val.name === this.tempRegistration.name);
-    if (differentMatchingReg === undefined) return regThatWasOpened;
+    if (differentMatchingReg === undefined) return null;
 
     return differentMatchingReg;
   }
@@ -255,10 +255,10 @@ export class TempTeamManager {
 
   changePlayerName(playerIdx: number, newName: string) {
     const player = this.tempTeam.players[playerIdx];
+    if (!player) return;
     if (!textFieldChanged(player.name, newName)) return;
 
     const trimmedName = newName.trim();
-    if (!player) return;
 
     player.name = trimmedName;
     player.validateName(this.teamHasPlayed && !!player.sourcePlayer);

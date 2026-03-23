@@ -110,7 +110,7 @@ export class MatchQuestion implements IQbjMatchQuestion, IYftDataModelObject {
     if (!shouldHaveBonus && hasBonus && this.bonus && controlledPts > 0) return 'Dead tossup with nonzero bonus points';
     if (shouldHaveBounceback && missingBouncebacks) return 'Missing bonus bounceback information';
     if (!shouldHaveBounceback && bouncebackPoints > 0)
-      return "Bonus bouceback information shouldn't exist for this question.";
+      return "Bonus bounceback information shouldn't exist for this question.";
 
     return '';
   }
@@ -183,7 +183,7 @@ export class MatchQuestionBonus implements IQbjMatchQuestionBonus, IYftDataModel
 
   /** Are any of this bonus's parts missing bounceback data? */
   missingBouncebacks() {
-    return !!this.parts.find((pt) => pt.bouncebackPoints === undefined);
+    return this.parts.some((pt) => pt.bouncebackPoints === undefined);
   }
 }
 
