@@ -50,9 +50,6 @@ const configuration: webpack.Configuration = {
       NODE_ENV: 'development',
     }),
 
-    new webpack.LoaderOptionsPlugin({
-      debug: true,
-    }),
   ],
 
   /**
