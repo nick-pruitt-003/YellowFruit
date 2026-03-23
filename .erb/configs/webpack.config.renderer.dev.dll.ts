@@ -9,6 +9,7 @@ import baseConfig from './webpack.config.base';
 import webpackPaths from './webpack.paths';
 import { dependencies } from '../../package.json';
 import checkNodeEnv from '../scripts/check-node-env';
+import rendererDevModule from './webpack.renderer.module';
 
 checkNodeEnv('development');
 
@@ -25,10 +26,7 @@ const configuration: webpack.Configuration = {
 
   externals: ['fsevents', 'crypto-browserify'],
 
-  /**
-   * Use `module` from `webpack.config.renderer.dev.js`
-   */
-  module: require('./webpack.config.renderer.dev').default.module,
+  module: rendererDevModule,
 
   entry: {
     renderer: Object.keys(dependencies || {}),
