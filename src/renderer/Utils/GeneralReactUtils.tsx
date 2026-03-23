@@ -10,7 +10,7 @@ import {
   TextFieldProps,
 } from '@mui/material';
 import React, { forwardRef, useState } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import { Close, Done, ExpandMore } from '@mui/icons-material';
 
 export enum YfCssClasses {
@@ -77,11 +77,11 @@ export function CollapsibleArea(props: React.PropsWithChildren<ICollapsibleAreaP
   return (
     <>
       <Grid container sx={{ cursor: 'pointer' }} onClick={() => setIsExpanded(!isExpanded)}>
-        <Grid xs>
+        <Grid size="grow">
           {title}
           {!isExpanded && secondaryTitle}
         </Grid>
-        <Grid xs="auto">
+        <Grid size="auto">
           <ExpandButton expand={isExpanded} sx={{ py: 0 }}>
             <ExpandMore />
           </ExpandButton>
@@ -109,7 +109,7 @@ export function YfNumericField(props: TextFieldProps) {
   return <TextField type="number" onWheel={numberInputOnWheelPreventChange} {...other} />;
 }
 
-export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef) => {
+export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef: React.ForwardedRef<HTMLButtonElement>) => {
   const { ...other } = props;
   return (
     <Button
@@ -117,7 +117,7 @@ export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef) => {
       color="success"
       startIcon={<Done />}
       {...other}
-      ref={buttonRef as React.RefObject<HTMLButtonElement>}
+      ref={buttonRef}
     >
       {hotkeyFormat('&Accept')}
     </Button>
