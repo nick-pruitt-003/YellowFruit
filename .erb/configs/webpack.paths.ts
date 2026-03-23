@@ -1,11 +1,14 @@
-const path = require('path');
+import path from 'path';
 
-const rootPath = path.join(__dirname, '../..');
+// All paths are derived from the project root (process.cwd()).
+// npm scripts always run from the project root, so this is reliable
+// and works in both CJS (ts-node) and ESM (webpack-cli native TS import) contexts.
+const rootPath = process.cwd();
 
-const erbPath = path.join(__dirname, '..');
+const erbPath = path.join(rootPath, '.erb');
 const erbNodeModulesPath = path.join(erbPath, 'node_modules');
 
-const dllPath = path.join(__dirname, '../dll');
+const dllPath = path.join(erbPath, 'dll');
 
 const srcPath = path.join(rootPath, 'src');
 const srcMainPath = path.join(srcPath, 'main');
