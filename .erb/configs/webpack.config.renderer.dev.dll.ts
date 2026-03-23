@@ -5,11 +5,12 @@
 import webpack from 'webpack';
 import path from 'path';
 import { merge } from 'webpack-merge';
-import baseConfig from './webpack.config.base';
-import webpackPaths from './webpack.paths';
-import { dependencies } from '../../package.json';
-import checkNodeEnv from '../scripts/check-node-env';
-import rendererDevModule from './webpack.renderer.module';
+import baseConfig from './webpack.config.base.ts';
+import webpackPaths from './webpack.paths.ts';
+import rootPackageJson from '../../package.json' with { type: 'json' };
+const { dependencies } = rootPackageJson;
+import checkNodeEnv from '../scripts/check-node-env.js';
+import rendererDevModule from './webpack.renderer.module.ts';
 
 checkNodeEnv('development');
 
