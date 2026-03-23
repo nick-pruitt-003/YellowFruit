@@ -62,15 +62,6 @@ const configuration: webpack.Configuration = {
       NODE_ENV: 'development',
     }),
 
-    new webpack.LoaderOptionsPlugin({
-      debug: true,
-      options: {
-        context: webpackPaths.srcPath,
-        output: {
-          path: webpackPaths.dllPath,
-        },
-      },
-    }),
   ],
 };
 
