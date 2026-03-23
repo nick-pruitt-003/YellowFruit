@@ -1,7 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintReact from '@eslint-react/eslint-plugin';
-import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default tseslint.config(
@@ -35,13 +34,9 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: {
-      'react-hooks': reactHooks,
-    },
     rules: {
-      // React hooks
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      // React hooks — rules-of-hooks is in recommended-typescript; add exhaustive-deps explicitly
+      '@eslint-react/exhaustive-deps': 'warn',
 
       // TypeScript overrides
       'no-shadow': 'off',
