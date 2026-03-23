@@ -76,6 +76,8 @@ const configuration: webpack.Configuration = {
       NODE_ENV: 'development',
     }),
 
+    new webpack.HotModuleReplacementPlugin(),
+
     new HtmlWebpackPlugin({
       filename: path.join('index.html'),
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
@@ -99,7 +101,7 @@ const configuration: webpack.Configuration = {
   devServer: {
     port,
     compress: true,
-    hot: 'only',
+    hot: true,
     headers: { 'Access-Control-Allow-Origin': '*' },
     static: {
       publicPath: '/',
