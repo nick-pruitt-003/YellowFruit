@@ -18,7 +18,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import { useContext, useRef, useState } from 'react';
 import Registration from '../DataModel/Registration';
 import useSubscription from '../Utils/CustomHooks';

@@ -1,7 +1,7 @@
 import { Button, Card, CardContent } from '@mui/material';
 import { useContext } from 'react';
 import { FileDownload, Launch } from '@mui/icons-material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import { LinkButton, YfCssClasses } from '../Utils/GeneralReactUtils';
 import { statReportProtocol } from '../../SharedUtils';
 import { StatReportFileNames, StatReportPages } from '../Enums';

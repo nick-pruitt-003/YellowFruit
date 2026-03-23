@@ -1,6 +1,6 @@
 import { IconButton, Stack, Table, TableBody, TableCell, TableContainer, TableRow, Tooltip } from '@mui/material';
 import { useContext, useMemo } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import { Add, Edit, JoinRight } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
 import YfCard from './YfCard';

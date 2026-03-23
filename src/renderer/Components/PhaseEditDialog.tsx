@@ -12,7 +12,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { TournamentContext } from '../TournamentManager';
 import { PhaseEditModalContext } from '../Modal Managers/TempPhaseManager';

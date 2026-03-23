@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import {
   Accordion,
   AccordionDetails,

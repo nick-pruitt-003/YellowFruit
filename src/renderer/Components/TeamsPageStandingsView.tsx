@@ -1,7 +1,7 @@
 /* eslint-disable react/require-default-props */
 /* eslint-disable prefer-destructuring */
 import { useContext } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid2';
 import {
   TableContainer,
   Table,
