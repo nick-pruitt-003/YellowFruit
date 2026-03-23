@@ -34,7 +34,7 @@ if (!fs.existsSync(webpackPaths.dllPath) || !fs.existsSync(manifest)) {
 }
 
 const configuration: webpack.Configuration = {
-  devtool: 'eval-source-map',
+  devtool: 'cheap-module-source-map',
 
   mode: 'development',
 
