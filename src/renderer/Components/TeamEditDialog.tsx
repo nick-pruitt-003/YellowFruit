@@ -117,7 +117,7 @@ function TeamEditDialogCore() {
           <Box
             sx={{
               height: 400,
-              '& .MuiGrid2-root': { display: 'flex', alignItems: 'end' },
+              '& .MuiGrid-root': { display: 'flex', alignItems: 'end' },
               '& .MuiFormHelperText-root': { whiteSpace: 'nowrap' },
             }}
           >

@@ -17,7 +17,7 @@ import {
   Skeleton,
   Button,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import React, { useContext, useMemo, useState } from 'react';
 import { Add, Delete, Edit, Error, ExpandMore, FileUpload, FilterAlt, Warning } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';

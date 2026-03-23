@@ -459,7 +459,7 @@ function PlayerGrid(props: IPlayerGridProps) {
   }
 
   return (
-    <Box sx={{ '& .MuiGrid2-container': { my: 2 } }}>
+    <Box sx={{ '& .MuiGrid-container': { my: 2 } }}>
       <Grid container columns={48} columnSpacing={1}>
         <Grid size="grow" />
         <Grid size={{ xs: numColumns }}>

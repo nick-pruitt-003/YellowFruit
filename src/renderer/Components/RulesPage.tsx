@@ -1,4 +1,4 @@
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import { Alert, Stack } from '@mui/material';
 import { useContext } from 'react';
 import { Lock } from '@mui/icons-material';

@@ -1,4 +1,4 @@
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import SchedulePickerCard from './SchedulePickerCard';
 import ScheduleDetailCard from './ScheduleDetailCard';
 

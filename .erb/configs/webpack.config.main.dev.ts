@@ -17,7 +17,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const configuration: webpack.Configuration = {
-  devtool: 'eval-source-map',
+  devtool: 'cheap-module-source-map',
 
   mode: 'development',
 

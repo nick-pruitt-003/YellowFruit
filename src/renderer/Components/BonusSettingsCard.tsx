@@ -1,4 +1,4 @@
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import { FormGroup, FormControlLabel, Switch, Typography, Stack, Box } from '@mui/material';
 import { ChangeEvent, useContext, useEffect, useState } from 'react';
 import YfCard from './YfCard';
