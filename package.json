@@ -169,7 +169,7 @@
       "package.json",
       "!node_modules"
     ],
-    "afterSign": ".erb/scripts/notarize.js",
+    "afterSign": ".erb/scripts/notarize.cjs",
     "mac": {
       "target": {
         "target": "default",
