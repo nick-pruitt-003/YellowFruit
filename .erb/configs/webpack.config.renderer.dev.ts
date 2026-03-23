@@ -106,7 +106,6 @@ const configuration: webpack.Configuration = {
               ref: true,
             },
           },
-          'file-loader',
         ],
       },
     ],
@@ -122,8 +121,6 @@ const configuration: webpack.Configuration = {
           }),
         ]),
 
-    new webpack.NoEmitOnErrorsPlugin(),
-
     /**
      * Create global constants which can be configured at compile time.
      *
@@ -138,10 +135,6 @@ const configuration: webpack.Configuration = {
      */
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'development',
-    }),
-
-    new webpack.LoaderOptionsPlugin({
-      debug: true,
     }),
 
     new ReactRefreshWebpackPlugin(),
