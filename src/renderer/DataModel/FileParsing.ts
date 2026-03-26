@@ -2,19 +2,6 @@
 // Parse objects from a JSON file into internal YellowFruit objects
 
 import stringSimilarity from 'string-similarity-js';
-
-/** Truncate a string to at most `max` Unicode code points (not UTF-16 code units).
- *  Prevents slicing surrogate pairs for supplementary-plane characters like cuneiform or emoji. */
-function unicodeTruncate(str: string, max: number): string {
-  // Array.from iterates by code point, so each element is one real character
-  const codePoints = Array.from(str);
-  return codePoints.length <= max ? str : codePoints.slice(0, max).join('');
-}
-
-/** Count Unicode code points (not UTF-16 code units). */
-export function unicodeLength(str: string): number {
-  return Array.from(str).length;
-}
 import { versionLt } from '../Utils/GeneralUtils';
 import AnswerType, { IQbjAnswerType, sortAnswerTypes } from './AnswerType';
 import { IIndeterminateQbj, IQbjObject, IQbjRefPointer, IRefTargetDict, IYftDataModelObject } from './Interfaces';
@@ -49,6 +36,18 @@ import {
   MatchQuestionBonusPart,
   MatchQuestionBuzz,
 } from './MatchQuestion';
+
+/** Truncate a string to at most `max` Unicode code points (not UTF-16 code units).
+ *  Prevents slicing surrogate pairs for supplementary-plane characters like cuneiform or emoji. */
+function unicodeTruncate(str: string, max: number): string {
+  const codePoints = Array.from(str);
+  return codePoints.length <= max ? str : codePoints.slice(0, max).join('');
+}
+
+/** Count Unicode code points (not UTF-16 code units). */
+export function unicodeLength(str: string): number {
+  return Array.from(str).length;
+}
 
 /** Threshold (0 to 1 scale) for string matching of team and player names when importing data. Similarity must be at leaset this high for us to use the match. */
 const stringSimConfThreshold = 0.8;

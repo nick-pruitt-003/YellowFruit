@@ -183,12 +183,13 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   /** Get a truncated name to use in match IDs */
   getLinkIdAbbrName() {
     const targetLength = 20;
-    // Keep all Unicode letters/digits (ł, ó, ę, etc.) — strip only punctuation/spaces.
+    // Normalize to NFC so precomposed and decomposed forms are equivalent.
+    // Keep Unicode letters, digits, and combining marks (ł, ó, ę, combining accents, etc.).
     // Use Array.from so slicing respects code points, not UTF-16 code units.
-    const name = Array.from(this.name.replace(/[^\p{L}\p{N}]/gu, ''));
+    const name = Array.from(this.name.normalize('NFC').replace(/[^\p{L}\p{N}\p{M}]/gu, ''));
     if (name.length <= targetLength) return name.join('');
 
-    const letter = Array.from(this.letter.replace(/[^\p{L}\p{N}]/gu, ''));
+    const letter = Array.from(this.letter.normalize('NFC').replace(/[^\p{L}\p{N}\p{M}]/gu, ''));
     if (letter.length === 0 || letter.length > 10) return name.slice(0, targetLength).join('');
     return `${name.slice(0, targetLength - letter.length).join('')}${letter.join('')}`;
   }
