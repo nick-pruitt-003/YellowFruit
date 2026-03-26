@@ -240,7 +240,7 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   }
 
   validateLetter() {
-    if (this.letter.length > Team.maxLetterLength) {
+    if ([...this.letter].length > Team.maxLetterLength) {
       this.letterValidation.status = ValidationStatuses.Error;
       this.letterValidation.message = `Maximum allowed length is ${Team.maxLetterLength} characters.`;
     } else if (this.letter.trim().includes(' ')) {
