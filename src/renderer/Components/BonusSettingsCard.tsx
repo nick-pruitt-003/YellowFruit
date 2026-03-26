@@ -208,10 +208,10 @@ export function AdvancedNumericRuleField(props: IAdvancedNumericRuleFieldProps) 
 
   return (
     <Grid container>
-      <Grid xs>
+      <Grid size="grow">
         <InlineLabel text={label} />
       </Grid>
-      <Grid xs="auto">
+      <Grid size="auto">
         <YfNumericField
           sx={{ marginTop: 1, width: '8ch' }}
           size="small"

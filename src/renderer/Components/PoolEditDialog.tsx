@@ -77,13 +77,13 @@ function PoolEditDialogCore() {
           <PoolNameField />
           <NumberOfTeamsField />
           <Grid container columnSpacing={1} sx={{ marginTop: 1 }}>
-            <Grid xs={3}>
+            <Grid size={3}>
               <Typography sx={{ paddingTop: 1 }}>Round Robin:</Typography>
             </Grid>
-            <Grid xs={5}>
+            <Grid size={5}>
               <RoundRobinsField />
             </Grid>
-            <Grid xs={4}>{canSetCarryover && <CarryoverField />}</Grid>
+            <Grid size={4}>{canSetCarryover && <CarryoverField />}</Grid>
           </Grid>
         </Box>
       </DialogContent>

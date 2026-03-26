@@ -75,18 +75,18 @@ function PhaseStandings(props: IPhaseStandingsProps) {
         >
           {thisTournament.isLastFullPhase(phase) && (
             <>
-              <Grid xs={6}>
+              <Grid size={6}>
                 {thisTournament.getFinalsPhases().map((ph) => (
                   <TiebreakerOrFinalsInfo key={ph.code} tbOrFinalsPhase={ph} />
                 ))}
               </Grid>
-              <Grid xs={6} sx={{ textAlign: 'right', '& .MuiSvgIcon-root': { fontSize: '1.5rem' } }}>
+              <Grid size={6} sx={{ textAlign: 'right', '& .MuiSvgIcon-root': { fontSize: '1.5rem' } }}>
                 <ConfirmFinalRanksCheckbox />
               </Grid>
             </>
           )}
           {phaseStats.pools.map((poolStats) => (
-            <Grid key={poolStats.pool.name} xs={12}>
+            <Grid key={poolStats.pool.name} size={12}>
               <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
                 <Table size="small">
                   <TableHead>

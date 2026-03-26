@@ -70,7 +70,7 @@ function MatchEditDialogCore() {
   const tournManager = useContext(TournamentContext);
   const modalManager = useContext(MatchEditModalContext);
   const [isOpen] = useSubscription(modalManager.modalIsOpen);
-  const tuhTotFieldRef = useRef<HTMLElement>(null);
+  const tuhTotFieldRef = useRef<HTMLInputElement>(null);
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const saveAndNewButtonRef = useRef<HTMLButtonElement>(null);
 

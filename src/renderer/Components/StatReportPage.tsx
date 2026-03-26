@@ -18,7 +18,7 @@ export default function StatReportPage() {
       <Card sx={{ marginBottom: 2, '& .MuiCardContent-root': { paddingBottom: 2.1 } }}>
         <CardContent>
           <Grid container>
-            <Grid xs>
+            <Grid size="grow">
               <Button
                 variant="contained"
                 size="small"
@@ -28,7 +28,7 @@ export default function StatReportPage() {
                 Export report
               </Button>
             </Grid>
-            <Grid xs="auto">
+            <Grid size="auto">
               <LinkButton sx={{ marginTop: 1 }} onClick={() => tournManager.launchStatReportInBrowserWindow()}>
                 <Launch fontSize="small" /> View report in browser
               </LinkButton>
