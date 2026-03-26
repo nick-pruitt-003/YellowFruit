@@ -208,7 +208,7 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
     if (nameIsRequired && this.name === '') {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = 'Name is required';
-    } else if (this.name.length > Player.nameMaxLength) {
+    } else if ([...this.name].length > Player.nameMaxLength) {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = `Maximum allowed length is ${Player.nameMaxLength} characters.`;
     } else {
@@ -222,7 +222,7 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
   }
 
   validateYearString() {
-    if (this.yearString.length > Player.yearStringMaxLength) {
+    if ([...this.yearString].length > Player.yearStringMaxLength) {
       this.yearStringValidation.status = ValidationStatuses.Error;
       this.yearStringValidation.message = `Maximum allowed length is ${Player.yearStringMaxLength} characters.`;
     } else if (this.yearString !== '' && this.year === undefined) {
