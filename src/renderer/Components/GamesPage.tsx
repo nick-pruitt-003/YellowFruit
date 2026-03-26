@@ -46,7 +46,7 @@ export default function GamesPage() {
       <Card sx={{ marginBottom: 2, '& .MuiCardContent-root': { paddingBottom: 2.1 } }}>
         <CardContent>
           <Grid container spacing={2}>
-            <Grid xs="auto">
+            <Grid size="auto">
               <ToggleButtonGroup
                 size="small"
                 color="primary"
@@ -64,7 +64,7 @@ export default function GamesPage() {
                 ))}
               </ToggleButtonGroup>
             </Grid>
-            <Grid xs>
+            <Grid size="grow">
               <Tooltip placement="top" title={`Import games from one file into multiple rounds (${CtrlOrCmd()}+M)`}>
                 <span>
                   <Button
@@ -81,7 +81,7 @@ export default function GamesPage() {
               </Tooltip>
             </Grid>
             {curView === 0 && (
-              <Grid xs={5}>
+              <Grid size={5}>
                 <TeamFilterField filterByTeam={setFilterTeam} />
               </Grid>
             )}
@@ -345,7 +345,7 @@ function MatchListItem(props: IMatchListItemProps) {
       sx={{ p: 1, '&:hover': { backgroundColor: 'ivory' } }}
       onDoubleClick={() => tournManager.openMatchEditModalExistingMatch(match, round)}
     >
-      <Grid xs={8}>
+      <Grid size={8}>
         <Box typography="h6">{match.getScoreString()}</Box>
         <Typography variant="body2">
           {match.carryoverPhases.length > 0 && `Carries over to: ${match.listCarryoverPhases()}`}
@@ -357,7 +357,7 @@ function MatchListItem(props: IMatchListItemProps) {
           </Typography>
         )}
       </Grid>
-      <Grid xs={2}>
+      <Grid size={2}>
         {validationStatus === ValidationStatuses.Error && (
           <Tooltip
             title={`This game has errors that prevent it from counting in the stat report: ${trunc(
@@ -374,7 +374,7 @@ function MatchListItem(props: IMatchListItemProps) {
           </Tooltip>
         )}
       </Grid>
-      <Grid xs={2}>
+      <Grid size={2}>
         <Box sx={{ float: 'right' }}>
           <Tooltip title="Edit game">
             <IconButton onClick={() => tournManager.openMatchEditModalExistingMatch(match, round)}>

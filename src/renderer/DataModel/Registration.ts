@@ -132,7 +132,7 @@ class Registration implements IQbjRegistration, IYftDataModelObject {
     if (this.name === '') {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = `Name is required.`;
-    } else if (this.name.length > Registration.maxNameLength) {
+    } else if ([...this.name].length > Registration.maxNameLength) {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = `Maximum allowed name length is ${Registration.maxNameLength} characters.`;
     } else {

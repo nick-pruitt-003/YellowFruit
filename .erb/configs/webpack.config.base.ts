@@ -19,12 +19,14 @@ const configuration: webpack.Configuration = {
         test: /\.[jt]sx?$/,
         exclude: /node_modules/,
         use: {
-          loader: 'ts-loader',
+          loader: 'swc-loader',
           options: {
-            // Remove this line to enable type checking in webpack builds
-            transpileOnly: true,
-            compilerOptions: {
-              module: 'esnext',
+            // Do NOT set module type here — webpack owns the module system.
+            // SWC only transpiles syntax; import/export are left for webpack to resolve.
+            jsc: {
+              parser: { syntax: 'typescript', tsx: true, decorators: true },
+              transform: { react: { runtime: 'automatic' } },
+              target: 'es2022',
             },
           },
         },

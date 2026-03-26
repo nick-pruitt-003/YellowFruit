@@ -61,7 +61,7 @@ function NullMatrix(props: INullMatrixProps) {
   const { message } = props;
 
   return (
-    <Grid xs={12}>
+    <Grid size={12}>
       <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
         <Table size="small">
           <TableBody>
@@ -87,7 +87,7 @@ function PoolMatrix(props: IPoolMatrixProps) {
   if (pool.poolTeams.length === 0) return null;
 
   return (
-    <Grid xs={12}>
+    <Grid size={12}>
       <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
         <Table size="small">
           <TableBody>

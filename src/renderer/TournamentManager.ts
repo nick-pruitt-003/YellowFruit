@@ -163,7 +163,9 @@ export class TournamentManager {
       this.onFinishInAppStatReport();
     });
     window.electron.ipcRenderer.on(IpcMainToRend.RequestStatReport, (filePathStart) => {
-      this.generateHtmlReport(filePathStart as string);
+      this.generateHtmlReport(filePathStart as string).catch((err) => {
+        console.error('Failed to generate HTML report', err);
+      });
     });
     window.electron.ipcRenderer.on(IpcMainToRend.GenerateBackup, () => {
       this.saveBackup();
@@ -785,23 +787,28 @@ export class TournamentManager {
    * @param filePathStart The full file path, minus the identifier of the specific page (e.g. _standing.html), if saving externally. E.g. C:\mydata\mystatreport.
    * If saving to the in-app stat report, should be undefined
    */
-  generateHtmlReport(filePathStart?: string) {
+  async generateHtmlReport(filePathStart?: string) {
     let filePrefix;
     if (filePathStart) filePrefix = getFileNameFromPath(filePathStart);
 
     this.tournament.setHtmlFilePrefix(filePrefix);
 
     this.tournament.compileStats(true);
+    const [standings, individuals, scoreboard, teamDetails, playerDetails, roundReport] = await Promise.all([
+      this.tournament.makeHtmlStandings(),
+      this.tournament.makeHtmlIndividuals(),
+      this.tournament.makeHtmlScoreboard(),
+      this.tournament.makeHtmlTeamDetail(),
+      this.tournament.makeHtmlPlayerDetail(),
+      this.tournament.makeHtmlRoundReport(),
+    ]);
     const reports: StatReportHtmlPage[] = [
-      { fileName: StatReportFileNames[StatReportPages.Standings], contents: this.tournament.makeHtmlStandings() },
-      { fileName: StatReportFileNames[StatReportPages.Individuals], contents: this.tournament.makeHtmlIndividuals() },
-      { fileName: StatReportFileNames[StatReportPages.Scoreboard], contents: this.tournament.makeHtmlScoreboard() },
-      { fileName: StatReportFileNames[StatReportPages.TeamDetails], contents: this.tournament.makeHtmlTeamDetail() },
-      {
-        fileName: StatReportFileNames[StatReportPages.PlayerDetails],
-        contents: this.tournament.makeHtmlPlayerDetail(),
-      },
-      { fileName: StatReportFileNames[StatReportPages.RoundReport], contents: this.tournament.makeHtmlRoundReport() },
+      { fileName: StatReportFileNames[StatReportPages.Standings], contents: standings },
+      { fileName: StatReportFileNames[StatReportPages.Individuals], contents: individuals },
+      { fileName: StatReportFileNames[StatReportPages.Scoreboard], contents: scoreboard },
+      { fileName: StatReportFileNames[StatReportPages.TeamDetails], contents: teamDetails },
+      { fileName: StatReportFileNames[StatReportPages.PlayerDetails], contents: playerDetails },
+      { fileName: StatReportFileNames[StatReportPages.RoundReport], contents: roundReport },
     ];
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.WriteStatReports, reports, filePathStart);
   }

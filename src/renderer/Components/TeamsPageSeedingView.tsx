@@ -34,16 +34,16 @@ export default function SeedingView() {
   return (
     <Grid container spacing={2}>
       {readOnly && (
-        <Grid xs={12}>
+        <Grid size={12}>
           <Alert variant="filled" severity="info" icon={<Lock fontSize="small" />}>
             Seeds are read-only
           </Alert>
         </Grid>
       )}
-      <Grid xs={12} sm={6} md={4}>
+      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
         {usingTemplate && <SeedList />}
       </Grid>
-      <Grid xs={12} sm={usingTemplate ? 6 : undefined} md={usingTemplate ? 8 : undefined}>
+      <Grid size={{ xs: 12, sm: usingTemplate ? 6 : undefined, md: usingTemplate ? 8 : undefined }}>
         <YfCard title="Pools">
           <PoolView />
         </YfCard>
@@ -165,14 +165,14 @@ function PoolView() {
   return (
     <Grid container spacing={2}>
       {phase.pools.map((pool) => (
-        <Grid key={pool.name} xs={12} md={6}>
+        <Grid key={pool.name} size={{ xs: 12, md: 6 }}>
           <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
             {usingTemplate ? <PoolViewSeedTable pool={pool} /> : <UnseededPoolTable pool={pool} />}
           </TableContainer>
         </Grid>
       ))}
       {!usingTemplate && unassignedTeams.length > 0 && (
-        <Grid xs={12}>
+        <Grid size={12}>
           <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
             <UnassignedTeamsList teamList={unassignedTeams} />
           </TableContainer>

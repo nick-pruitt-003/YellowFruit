@@ -37,6 +37,18 @@ import {
   MatchQuestionBuzz,
 } from './MatchQuestion';
 
+/** Truncate a string to at most `max` Unicode code points (not UTF-16 code units).
+ *  Prevents slicing surrogate pairs for supplementary-plane characters like cuneiform or emoji. */
+function unicodeTruncate(str: string, max: number): string {
+  const codePoints = Array.from(str);
+  return codePoints.length <= max ? str : codePoints.slice(0, max).join('');
+}
+
+/** Count Unicode code points (not UTF-16 code units). */
+export function unicodeLength(str: string): number {
+  return Array.from(str).length;
+}
+
 /** Threshold (0 to 1 scale) for string matching of team and player names when importing data. Similarity must be at leaset this high for us to use the match. */
 const stringSimConfThreshold = 0.8;
 
@@ -371,7 +383,7 @@ export default class FileParser {
     if (!name?.trim()) {
       throw new Error('This file contains a Registration object with no name.');
     }
-    const yftReg = new Registration(name.trim().substring(0, Registration.maxNameLength));
+    const yftReg = new Registration(unicodeTruncate(name.trim(), Registration.maxNameLength));
     yftReg.isSmallSchool = yfExtraData?.isSmallSchool || false;
     yftReg.teams = this.parseTeamList(teams as IIndeterminateQbj[]);
 
@@ -399,7 +411,7 @@ export default class FileParser {
       throw new Error('This file contains a Team object with no name');
     }
 
-    const yfTeam = new Team(name.trim().substring(0, Registration.maxNameLength + 1 + Team.maxLetterLength));
+    const yfTeam = new Team(unicodeTruncate(name.trim(), Registration.maxNameLength + 1 + Team.maxLetterLength));
     const yfPlayers = this.parsePlayerList(players as IIndeterminateQbj[], yfTeam.name);
     if (yfPlayers.length < 1) {
       throw new Error(`Team ${name} doesn't have any players.`);
@@ -426,7 +438,7 @@ export default class FileParser {
     if (trimmed.includes(' ')) {
       throw new Error(`Team ${teamName} has an invalid letter/modifier: ${trimmed}`);
     }
-    return trimmed.substring(0, Team.maxLetterLength);
+    return unicodeTruncate(trimmed, Team.maxLetterLength);
   }
 
   parsePlayerList(ary: IIndeterminateQbj[], teamName: string): Player[] {
@@ -450,8 +462,8 @@ export default class FileParser {
       throw new Error(`Team ${teamName} contains a player with no name.`);
     }
 
-    const yfPlayer = new Player(name.trim().substring(0, Player.nameMaxLength));
-    const yearStr = yfExtraData?.yearString?.trim().substring(0, Player.yearStringMaxLength);
+    const yfPlayer = new Player(unicodeTruncate(name.trim(), Player.nameMaxLength));
+    const yearStr = yfExtraData?.yearString ? unicodeTruncate(yfExtraData.yearString.trim(), Player.yearStringMaxLength) : undefined;
     if (yearStr) {
       yfPlayer.yearString = yearStr;
     } else {
