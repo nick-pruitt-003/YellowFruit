@@ -76,7 +76,7 @@ function TeamEditDialogCore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thisTournament, tournManager.teamBeingModified, modalManager.sessionID]);
 
-  const orgNameFieldRef = useRef<HTMLElement>(null);
+  const orgNameFieldRef = useRef<HTMLInputElement>(null);
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const saveAndNewButtonRef = useRef<HTMLButtonElement>(null);
   const autoFocusFirstPlayer = regName !== '' && teamLetter !== '' && numPlayers === 1;

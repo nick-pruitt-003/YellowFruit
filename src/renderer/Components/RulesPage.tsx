@@ -19,28 +19,28 @@ function RulesPage() {
   return (
     <Grid container spacing={2}>
       {readOnly && (
-        <Grid xs={12}>
+        <Grid size={12}>
           <Alert variant="filled" severity="info" icon={<Lock fontSize="small" />}>
             Settings are read-only
           </Alert>
         </Grid>
       )}
-      <Grid xs={12}>
+      <Grid size={12}>
         <StandardRuleSetCard />
       </Grid>
-      <Grid xs={12} sm={4}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <Stack spacing={2}>
           <RoundLengthSettingsCard />
           <TossupSettingsCard />
         </Stack>
       </Grid>
-      <Grid xs={12} sm={4}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <Stack spacing={2}>
           <BonusSettingsCard />
           <LightningRoundSettingsCard />
         </Stack>
       </Grid>
-      <Grid xs={12} sm={4}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <Stack spacing={2}>
           <MaxPlayersSettingsCard />
           <OvertimeSettingsCard />

@@ -85,10 +85,10 @@ function RegistrationView() {
     <Card>
       <CardContent>
         <Grid container spacing={1}>
-          <Grid xs sx={{ display: 'flex', alignItems: 'center' }}>
+          <Grid size="grow" sx={{ display: 'flex', alignItems: 'center' }}>
             {teamTotDisp}
           </Grid>
-          <Grid xs="auto">
+          <Grid size="auto">
             <ImportButtons disabled={cantAddMoreTeams} />
           </Grid>
         </Grid>
@@ -209,11 +209,11 @@ function TeamListItem(props: ITeamListItemProps) {
       sx={{ p: 1, '&:hover': { backgroundColor: 'ivory' } }}
       onDoubleClick={() => tournManager.openTeamEditModalExistingTeam(registration, team)}
     >
-      <Grid xs={9}>
+      <Grid size={9}>
         <Box typography="h5">{team.name}</Box>
         <Typography variant="body2">{teamInfoDisplay(registration, team)}</Typography>
       </Grid>
-      <Grid xs={3}>
+      <Grid size={3}>
         <Box sx={{ float: 'right' }}>
           {nextLetter && !cantAddMoreTeams && (
             <Tooltip title={`Add ${nextLetter} team`}>
