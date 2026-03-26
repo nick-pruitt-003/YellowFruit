@@ -183,12 +183,14 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   /** Get a truncated name to use in match IDs */
   getLinkIdAbbrName() {
     const targetLength = 20;
-    let name = this.name.replaceAll(/\W/g, '');
-    if (name.length <= targetLength) return name;
+    // Keep all Unicode letters/digits (ł, ó, ę, etc.) — strip only punctuation/spaces.
+    // Use Array.from so slicing respects code points, not UTF-16 code units.
+    const name = Array.from(this.name.replace(/[^\p{L}\p{N}]/gu, ''));
+    if (name.length <= targetLength) return name.join('');
 
-    let letter = this.letter.replaceAll(/\W/g, '');
-    if (letter === '' || letter.length > 10) return name.substring(0, targetLength);
-    return `${name.substring(0, targetLength - letter.length)}${letter}`;
+    const letter = Array.from(this.letter.replace(/[^\p{L}\p{N}]/gu, ''));
+    if (letter.length === 0 || letter.length > 10) return name.slice(0, targetLength).join('');
+    return `${name.slice(0, targetLength - letter.length).join('')}${letter.join('')}`;
   }
 
   removeNullPlayers() {

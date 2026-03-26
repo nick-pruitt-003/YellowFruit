@@ -1199,7 +1199,9 @@ function playerDetailLinkId(player: Player, team: Team) {
 }
 
 function alphaOnly(str: string) {
-  return str.replace(/\W/g, '');
+  // Use Unicode property escapes so letters like ł, ó, ę, ñ are kept in anchor IDs.
+  // HTML5 allows any Unicode character in id attributes.
+  return str.replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 /** Header at the top of the html document */
