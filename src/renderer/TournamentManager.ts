@@ -163,7 +163,9 @@ export class TournamentManager {
       this.onFinishInAppStatReport();
     });
     window.electron.ipcRenderer.on(IpcMainToRend.RequestStatReport, (filePathStart) => {
-      this.generateHtmlReport(filePathStart as string);
+      this.generateHtmlReport(filePathStart as string).catch((err) => {
+        console.error('Failed to generate HTML report', err);
+      });
     });
     window.electron.ipcRenderer.on(IpcMainToRend.GenerateBackup, () => {
       this.saveBackup();
