@@ -16,6 +16,7 @@ const electronHandler = {
         ipcRenderer.removeListener(channel, subscription);
       };
     },
+    invoke: (channel: IpcBidirectional, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args),
     once(channel: IpcMainToRend | IpcBidirectional, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
@@ -25,6 +26,8 @@ const electronHandler = {
       }
     },
   },
+  /** Get the process.platform variable */
+  getPlatform: () => process.platform,
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

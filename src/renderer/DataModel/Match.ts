@@ -20,6 +20,17 @@ import { LeftOrRight, wlt } from '../Utils/UtilTypes';
 import AnswerType from './AnswerType';
 import { ScoringRules } from './ScoringRules';
 import { MatchPlayer } from './MatchPlayer';
+import { IQbjMatchQuestion, MatchQuestion } from './MatchQuestion';
+
+/** Different situations for whether it's okay to use a match to calculate stats */
+export enum StatsValidity {
+  /** A normal game with normal stats */
+  valid,
+  /** A game with a final score, but the player-specific stats should be ignored */
+  noIndividuals,
+  /** A game that is invalid and shouldn't be used in the standings at all */
+  omit,
+}
 
 export interface IQbjMatch extends IQbjObject {
   /** The number of tossups read, including any tossups read in overtime */
@@ -44,6 +55,14 @@ export interface IQbjMatch extends IQbjObject {
   carryoverPhases?: IQbjPhase[] | IQbjRefPointer[];
   /** Additional notes about this match */
   notes?: string;
+  /** Question-level data */
+  matchQuestions?: IQbjMatchQuestion[];
+}
+
+/** MODAQ match files have a non-standard "_round" attribute */
+export interface IModaqMatch extends IQbjMatch {
+  /** The round number as defined by the user when they exported the match from the MODAQ question reader */
+  _round: number;
 }
 
 /** Tournament object as written to a .yft file */
@@ -54,6 +73,7 @@ export interface IYftFileMatch extends IQbjMatch, IYftFileObject {
 /** Additional info not in qbj but needed for a .yft file */
 interface IMatchExtraData {
   otherValidation: IYftFileMatchValidationMsg[];
+  importedFile?: string;
 }
 
 /** A single match scheduled between two teams */
@@ -94,6 +114,14 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
   notes?: string;
 
+  matchQuestions: MatchQuestion[] = [];
+
+  /** The name of the file that the game was imported from */
+  importedFile?: string;
+
+  /** Whether this game should count towards stats */
+  statsValidity: StatsValidity = StatsValidity.valid;
+
   /** Validation directly associated with the total TUH field */
   totalTuhFieldValidation: MatchValidationMessage;
 
@@ -103,23 +131,45 @@ export class Match implements IQbjMatch, IYftDataModelObject {
   /** Any other messages that should go at the bottom of the modal rather than a specific field */
   modalBottomValidation: MatchValidationCollection;
 
+  private static readonly idCounterStartingValue = 1000;
+
   /** counter to make sure match IDs are unique */
-  private static idCounter = 1000;
+  private static idCounter = Match.idCounterStartingValue;
 
   private idNumber: number;
 
   get id(): string {
-    return `Match_${this.idNumber}`;
+    return `Match_${this.idNumber}~${this.leftTeam.team?.getLinkIdAbbrName() ?? ''}${
+      this.rightTeam.team?.getLinkIdAbbrName() ?? ''
+    }`;
   }
 
-  constructor(leftTeam?: Team, rightTeam?: Team, answerTypes?: AnswerType[]) {
-    this.idNumber = Match.idCounter++;
+  constructor(leftTeam?: Team, rightTeam?: Team, answerTypes?: AnswerType[], idNumber?: number) {
+    if (idNumber !== undefined) this.idNumber = idNumber;
+    else this.idNumber = Match.idCounter++;
     this.leftTeam = new MatchTeam(leftTeam, answerTypes);
     this.rightTeam = new MatchTeam(rightTeam, answerTypes);
 
     this.totalTuhFieldValidation = new MatchValidationMessage(MatchValidationType.InvalidTotalTuh);
     this.overtimeTuhFieldValidation = new MatchValidationMessage(MatchValidationType.InvalidOvertimeTuh);
     this.modalBottomValidation = new MatchValidationCollection();
+  }
+
+  /** Get the numeric part of the Match id */
+  getIdNumber() {
+    return this.idNumber;
+  }
+
+  /** Set the counter of match ID numbers to a specific value. Use this if opening a file to make sure new match IDs don't collide with existing ones. */
+  static overrideIdCounter(newStartingNumber: number) {
+    this.idCounter = newStartingNumber;
+  }
+
+  /** If given an string of the form "Match_<positive integer>" or "Match_<positive integer>~<addl chars>", set the ID number to that integer */
+  tryToSetId(id: string) {
+    if (id.search(/^Match_(\d+$|\d+~)/) === -1) return;
+
+    this.idNumber = parseInt(id.replace(/^Match_/, ''), 10);
   }
 
   makeCopy(): Match {
@@ -142,6 +192,9 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     this.scorekeeper = source.scorekeeper;
     this.serial = source.serial;
     this.notes = source.notes;
+    this.matchQuestions = source.matchQuestions.map((mq) => mq.makeCopy());
+    this.statsValidity = source.statsValidity;
+    this.importedFile = source.importedFile;
 
     this.totalTuhFieldValidation = source.totalTuhFieldValidation.makeCopy();
     this.overtimeTuhFieldValidation = source.overtimeTuhFieldValidation.makeCopy();
@@ -161,13 +214,17 @@ export class Match implements IQbjMatch, IYftDataModelObject {
       scorekeeper: this.scorekeeper,
       serial: this.serial,
       notes: this.notes,
+      matchQuestions: this.matchQuestions.length > 0 ? this.matchQuestions.map((mq) => mq.toFileObject()) : undefined,
     };
 
     if (isTopLevel) qbjObject.type = QbjTypeNames.Match;
     if (isReferenced) qbjObject.id = this.id;
     if (qbjOnly) return qbjObject;
 
-    const yfData: IMatchExtraData = { otherValidation: this.modalBottomValidation.toFileObject() };
+    const yfData: IMatchExtraData = {
+      otherValidation: this.modalBottomValidation.toFileObject(),
+      importedFile: this.importedFile,
+    };
     const yftFileObj = { YfData: yfData, ...qbjObject };
 
     return yftFileObj;
@@ -263,15 +320,24 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     return this.leftTeam;
   }
 
+  includesTeam(team: Team) {
+    return this.leftTeam.team === team || this.rightTeam.team === team;
+  }
+
   setTeamScore(whichTeam: LeftOrRight, points: number | undefined) {
     const mt = this.getMatchTeam(whichTeam);
     mt.points = points;
   }
 
-  setBouncebackPoints(whichTeam: LeftOrRight, points: number | undefined) {
+  setBouncebackPoints(whichTeam: LeftOrRight, points: number | undefined, scoringRules: ScoringRules) {
     const mt = this.getMatchTeam(whichTeam);
     mt.bonusBouncebackPoints = points;
-    mt.validateBouncebackPoints();
+    mt.validateBouncebackPoints(scoringRules);
+  }
+
+  setLightningPoints(whichTeam: LeftOrRight, points: number | undefined) {
+    const mt = this.getMatchTeam(whichTeam);
+    mt.lightningPoints = points;
   }
 
   setForfeit(whichTeam: LeftOrRight, isForfeit: boolean) {
@@ -290,6 +356,26 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
   removeCarryoverPhase(phase: Phase) {
     this.carryoverPhases = this.carryoverPhases.filter((ph) => ph !== phase);
+  }
+
+  /** Number of tossups heard in regulation */
+  getRegulationTuh() {
+    return (this.tossupsRead ?? 0) - (this.overtimeTossupsRead ?? 0);
+  }
+
+  /** The total number of tossups answered correctly */
+  getTotalTuConverted() {
+    return this.leftTeam.getTotalBuzzes(true) + this.rightTeam.getTotalBuzzes(true);
+  }
+
+  /** The total number of tossups answered correctly in regulation */
+  getRegulationTuConverted() {
+    return this.getTotalTuConverted() - this.getOvertimeTuConverted();
+  }
+
+  /** The total number of tossups answered correctly in overtime */
+  getOvertimeTuConverted() {
+    return this.leftTeam.getCorrectTossupsWithoutBonuses() + this.rightTeam.getCorrectTossupsWithoutBonuses();
   }
 
   getBouncebackPartsHeard(whichTeam: LeftOrRight, scoringRules: ScoringRules): number {
@@ -351,10 +437,10 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     const opponent = this.getOpponent(whichTeam);
     if (thisTeam.forfeitLoss && opponent.forfeitLoss) return 'Not played';
     if (this.isForfeit()) return 'Forfeit';
-    const pts = thisTeam.points;
-    const oppPts = opponent.points;
+    const pts = addParensToNegative(thisTeam.points);
+    const oppPts = addParensToNegative(opponent.points);
     const ot = showOT && !!this.overtimeTossupsRead ? ' (OT)' : '';
-    return `${pts}-${oppPts}${ot}`;
+    return `${pts} - ${oppPts}${ot}`;
   }
 
   /** 'W', 'L', or 'T' */
@@ -386,6 +472,18 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     return 'tie';
   }
 
+  getOvertimeSummary() {
+    if (!this.overtimeTossupsRead || this.overtimeTossupsRead < 1) {
+      return 'None';
+    }
+    if (!this.leftTeam.team || !this.rightTeam.team) return '';
+
+    return `${this.overtimeTossupsRead} TU read,
+      ${this.leftTeam.team.getTruncatedName(25)} ${this.leftTeam.getOvertimePoints()} pts,
+      ${this.rightTeam.team.getTruncatedName(25)} ${this.rightTeam.getOvertimePoints()} pts`;
+  }
+
+  /** Get the list of previously calculated error messages (does NOT revalidate) */
   getErrorMessages(ignoreHidden: boolean = false): string[] {
     let errs: string[] = [];
     if (this.totalTuhFieldValidation.status === ValidationStatuses.Error) {
@@ -395,6 +493,51 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     errs = errs.concat(this.leftTeam.getErrorMessages(ignoreHidden));
     errs = errs.concat(this.rightTeam.getErrorMessages(ignoreHidden));
     return errs;
+  }
+
+  /** Get the list of previously calculated warning messages (does NOT revalidate) */
+  getWarningMessages(): string[] {
+    let warnings: string[] = [];
+    if (this.totalTuhFieldValidation.status === ValidationStatuses.Warning) {
+      warnings.push(`Tossups heard: ${this.totalTuhFieldValidation.message}`);
+    }
+    warnings = warnings.concat(this.modalBottomValidation.getWarningMessages());
+    warnings = warnings.concat(this.leftTeam.getWarningMessages());
+    warnings = warnings.concat(this.rightTeam.getWarningMessages());
+    return warnings;
+  }
+
+  getNumSuppressedWarnings() {
+    let cnt = 0;
+    if (this.totalTuhFieldValidation.isSuppressed) cnt++;
+    if (this.overtimeTuhFieldValidation.isSuppressed) cnt++;
+    cnt += this.modalBottomValidation.getNumSuppressedMsgs();
+    cnt += this.leftTeam.getNumSuppresedMsgs();
+    cnt += this.rightTeam.getNumSuppresedMsgs();
+    return cnt;
+  }
+
+  restoreSuppressedMsgs() {
+    this.totalTuhFieldValidation.isSuppressed = false;
+    this.overtimeTuhFieldValidation.isSuppressed = false;
+    this.modalBottomValidation.restoreSuppressedMsgs();
+    this.leftTeam.restoreSuppressedMsgs();
+    this.rightTeam.restoreSuppressedMsgs();
+  }
+
+  /** Determine whether the match is in an error state, warning state, or OK, based on existing validation results (does NOT re-validate) */
+  getOverallValidationStatus() {
+    if (this.getErrorMessages().length > 0) return ValidationStatuses.Error;
+    if (this.getWarningMessages().length > 0) return ValidationStatuses.Warning;
+    return ValidationStatuses.Ok;
+  }
+
+  determineStatsValidity() {
+    if (this.getOverallValidationStatus() === ValidationStatuses.Error) {
+      this.statsValidity = StatsValidity.omit;
+    } else {
+      this.statsValidity = StatsValidity.valid;
+    }
   }
 
   validateAll(scoringRules: ScoringRules) {
@@ -432,8 +575,9 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.LowTotalTuh,
         ValidationStatuses.Warning,
         `Total tossups heard is less than ${scoringRules.regulationTossupCount}, the standard number for a game`,
-        true,
       );
+      // this warning is redundant in this case
+      this.modalBottomValidation.clearMsgType(MatchValidationType.RegulationTuhNotStandard);
       return;
     }
 
@@ -470,7 +614,6 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.TeamsNotInSamePool,
         ValidationStatuses.Warning,
         'These teams are not in the same pool for this round',
-        true,
       );
       return;
     }
@@ -484,11 +627,10 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.TeamAlreadyPlayedInRound,
         ValidationStatuses.Warning,
         message,
-        true,
       );
       return;
     }
-    this.modalBottomValidation.clearMsgType(MatchValidationType.TeamsNotInSamePool);
+    this.modalBottomValidation.clearMsgType(MatchValidationType.TeamAlreadyPlayedInRound);
   }
 
   /** Validate the team-level stats for both teams */
@@ -506,7 +648,6 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.TieGame,
         ValidationStatuses.Warning,
         'This game is a tie',
-        true,
       );
     } else {
       this.modalBottomValidation.clearMsgType(MatchValidationType.TieGame);
@@ -556,7 +697,6 @@ export class Match implements IQbjMatch, IYftDataModelObject {
           MatchValidationType.FewerThanExpectedTUH,
           ValidationStatuses.Warning,
           `Players have heard fewer than ${expectedTotalTUH} tossups in aggregate`,
-          true,
         );
       } else {
         matchTeam.modalBottomValidation.clearMsgType(MatchValidationType.FewerThanExpectedTUH);
@@ -578,7 +718,7 @@ export class Match implements IQbjMatch, IYftDataModelObject {
   }
 
   validateTotalBuzzes() {
-    const totalConvertedTU = this.leftTeam.getTotalBuzzes(true) + this.rightTeam.getTotalBuzzes(true);
+    const totalConvertedTU = this.getTotalTuConverted();
     if (this.tossupsRead !== undefined && this.tossupsRead > 0 && totalConvertedTU > this.tossupsRead) {
       this.modalBottomValidation.addValidationMsg(
         MatchValidationType.MatchHasTooConvertedTU,
@@ -616,9 +756,10 @@ export class Match implements IQbjMatch, IYftDataModelObject {
   }
 
   validateOvertimeTuhField(scoringRules: ScoringRules) {
-    if (this.overtimeTossupsRead === undefined || this.overtimeTossupsRead === 0) {
+    if (this.isForfeit() || this.overtimeTossupsRead === undefined || this.overtimeTossupsRead === 0) {
       this.overtimeTuhFieldValidation.setOk();
       this.modalBottomValidation.clearMsgType(MatchValidationType.OtTuhLessThanMinimum);
+      this.modalBottomValidation.clearMsgType(MatchValidationType.OvertimeTuhTooHigh);
       return;
     }
     if (this.overtimeTossupsRead < 0 || this.overtimeTossupsRead > 999) {
@@ -632,15 +773,30 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.OtTuhLessThanMinimum,
         ValidationStatuses.Warning,
         `Overtime tossups heard is less than the minimum of ${scoringRules.minimumOvertimeQuestionCount}`,
-        true,
       );
     } else {
       this.modalBottomValidation.clearMsgType(MatchValidationType.OtTuhLessThanMinimum);
     }
+
+    const regulationTuh = this.getRegulationTuh();
+    const regulationConv = this.getRegulationTuConverted();
+    if (regulationConv > regulationTuh) {
+      this.modalBottomValidation.addValidationMsg(
+        MatchValidationType.OvertimeTuhTooHigh,
+        ValidationStatuses.Error,
+        `Based on overtime stats, ${regulationConv} tossups were answered correctly in regulation, but only ${regulationTuh} were read in regulation.`,
+      );
+    } else {
+      this.modalBottomValidation.clearMsgType(MatchValidationType.OvertimeTuhTooHigh);
+    }
   }
 
   validateTotalAndOtTuhRelationship(scoringRules: ScoringRules) {
-    if (this.tossupsRead === undefined) {
+    if (
+      this.tossupsRead === undefined ||
+      (this.tossupsRead === 0 && this.isForfeit()) ||
+      this.modalBottomValidation.findMsgType(MatchValidationType.LowTotalTuh)
+    ) {
       this.modalBottomValidation.clearMsgType(MatchValidationType.RegulationTuhNotStandard);
       return;
     }
@@ -658,7 +814,6 @@ export class Match implements IQbjMatch, IYftDataModelObject {
         MatchValidationType.RegulationTuhNotStandard,
         ValidationStatuses.Warning,
         `Tossups read in regulation is ${regulationTuh}, which is less than the standard number of ${scoringRules.maximumRegulationTossupCount}`,
-        true,
       );
     } else {
       this.modalBottomValidation.clearMsgType(MatchValidationType.RegulationTuhNotStandard);
@@ -686,6 +841,7 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
   validateOvertimeScoreMath(scoringRules: ScoringRules) {
     if (
+      this.isForfeit() ||
       this.leftTeam.points === undefined ||
       this.rightTeam.points === undefined ||
       this.overtimeTossupsRead === undefined ||
@@ -701,7 +857,6 @@ export class Match implements IQbjMatch, IYftDataModelObject {
           MatchValidationType.OtButRegScoreNotTied,
           ValidationStatuses.Warning,
           "Game went to overtime but the score wasn't tied after regulation, based on each team's overtime stats",
-          true,
         );
       } else {
         this.modalBottomValidation.clearMsgType(MatchValidationType.OtButRegScoreNotTied);
@@ -748,4 +903,10 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
 export function otherTeam(whichTeam: LeftOrRight): LeftOrRight {
   return whichTeam === 'left' ? 'right' : 'left';
+}
+
+function addParensToNegative(score: number | undefined): string {
+  if (score === undefined) return '';
+  if (score >= 0) return score.toString();
+  return `(${score})`;
 }

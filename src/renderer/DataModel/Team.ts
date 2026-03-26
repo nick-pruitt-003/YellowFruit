@@ -1,3 +1,4 @@
+import { trunc } from '../Utils/GeneralUtils';
 import {
   IQbjObject,
   IQbjRefPointer,
@@ -63,7 +64,7 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   overallRank: Rank;
 
   /** Disallow creating teams with more than this many players on the roster */
-  static maxPlayers = 30;
+  static readonly maxPlayers = 100;
 
   static maxLetterLength = 20;
 
@@ -159,6 +160,35 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   /** Add a new player to the end of the list */
   pushBlankPlayer() {
     this.players.push(new Player(''));
+  }
+
+  /** Set the 'name' property, given the parent registration's name */
+  compileName(registrationName: string) {
+    this.name = this.letter === '' ? registrationName : `${registrationName} ${this.letter}`;
+  }
+
+  /**
+   * Get a truncated version of a team name
+   * @param length number of characters to truncate to (not including ellipsis). Default is 35
+   * @returns Team name where the organization name is truncated. e.g. "Abcdef..." or "Abcdef... B"
+   */
+  getTruncatedName(length: number = 35) {
+    if (this.name.length <= length) return this.name;
+
+    if (this.letter === '') return trunc(this.name, length);
+
+    return `${trunc(this.name, length - this.letter.length - 1)} ${this.letter}`;
+  }
+
+  /** Get a truncated name to use in match IDs */
+  getLinkIdAbbrName() {
+    const targetLength = 20;
+    let name = this.name.replaceAll(/\W/g, '');
+    if (name.length <= targetLength) return name;
+
+    let letter = this.letter.replaceAll(/\W/g, '');
+    if (letter === '' || letter.length > 10) return name.substring(0, targetLength);
+    return `${name.substring(0, targetLength - letter.length)}${letter}`;
   }
 
   removeNullPlayers() {
@@ -268,5 +298,12 @@ export class Team implements IQbjTeam, IYftDataModelObject {
       errs = errs.concat(errsOnePlayer.map((err) => `Players row ${idx + 1}: ${err}`));
     });
     return errs;
+  }
+
+  findPlayerByName(name: string) {
+    for (const pl of this.players) {
+      if (pl.name === name) return pl;
+    }
+    return undefined;
   }
 }

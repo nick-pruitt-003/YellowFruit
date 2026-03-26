@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import Registration from '../DataModel/Registration';
 import { Team } from '../DataModel/Team';
-import { nextAlphabetLetter, teamGetNameAndLetter } from '../Utils/GeneralUtils';
+import { nextAlphabetLetter, teamGetNameAndLetter, textFieldChanged } from '../Utils/GeneralUtils';
 import { NullObjects } from '../Utils/UtilTypes';
 import { Player } from '../DataModel/Player';
 import Tournament, { NullTournament } from '../DataModel/Tournament';
@@ -152,7 +152,7 @@ export class TempTeamManager {
   }
 
   /** Get the registration we would actually need to change (if any), since changing the organization
-   *  name can switch which regitration we're editing. Returns null if we should create a new registration.
+   *  name can switch which registration we're editing. Returns null if we should create a new registration.
    */
   getRegistrationToSaveTo(
     regThatWasOpened: Registration | null,
@@ -161,27 +161,35 @@ export class TempTeamManager {
     if (this.tempRegistration.name === regThatWasOpened?.name) {
       return regThatWasOpened;
     }
-    const matchingReg = allRegistrations.find((val) => val.name === this.tempRegistration.name);
-    if (matchingReg === undefined) return null;
+    const differentMatchingReg = allRegistrations.find((val) => val.name === this.tempRegistration.name);
+    if (differentMatchingReg === undefined) return null;
 
-    return matchingReg;
+    return differentMatchingReg;
   }
 
   /**
    * Transfer data from temp object to real object
    * @param targetReg real Registration object to save to
    * @param teamIsNew is this team new to this Registration? (regardless of whether it previously existed on another Registration)
+   * @param existingTeam Existing team that is being moved to this registration
    */
-  saveRegistration(targetReg: Registration, teamIsNew?: boolean) {
+  saveRegistration(targetReg: Registration, teamIsNew?: boolean, existingTeam?: Team) {
     if (teamIsNew) {
       this.tempRegistration.teams = [];
       if (targetReg.teams.length === 1 && this.tempTeam.letter === 'B') {
         targetReg.teams[0].makeThisTheATeam();
       }
       this.tempRegistration.addTeams(targetReg.teams);
-      this.tempRegistration.addTeam(this.tempTeam);
+      if (existingTeam) {
+        existingTeam.copyFromTeam(this.tempTeam, 'restoreSource');
+        this.tempRegistration.addTeam(existingTeam);
+      } else {
+        this.tempTeam.removeNullPlayers(); // not entirely sure why we need to do this again
+        this.tempRegistration.addTeam(this.tempTeam);
+      }
     }
     targetReg.copyFromRegistration(this.tempRegistration);
+    targetReg.compileTeamNames();
     targetReg.sortTeams();
   }
 
@@ -208,9 +216,7 @@ export class TempTeamManager {
 
   /** Keep the official team name, which is not directly edited, up to date */
   makeTeamName() {
-    const teamLetter = this.tempTeam.letter;
-    const orgName = this.tempRegistration.name;
-    this.tempTeam.name = teamLetter === '' ? orgName : `${orgName} ${teamLetter}`;
+    this.tempTeam.compileName(this.tempRegistration.name);
   }
 
   changeTeamLetter(letter: string) {
@@ -248,9 +254,11 @@ export class TempTeamManager {
   }
 
   changePlayerName(playerIdx: number, newName: string) {
-    const trimmedName = newName.trim();
     const player = this.tempTeam.players[playerIdx];
     if (!player) return;
+    if (!textFieldChanged(player.name, newName)) return;
+
+    const trimmedName = newName.trim();
 
     player.name = trimmedName;
     player.validateName(this.teamHasPlayed && !!player.sourcePlayer);

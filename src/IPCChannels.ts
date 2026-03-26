@@ -2,6 +2,8 @@
 export enum IpcRendToMain {
   /** Save arbitrary file contents */
   saveFile = 'saveFile',
+  /** Tell the main process what file is being edited */
+  setYftFilePath = 'setYftFilePath',
   /** Set the title of the electron window */
   setWindowTitle = 'setWindowTitle',
   /** Retrieve the directory containing the in-app stat report */
@@ -18,6 +20,14 @@ export enum IpcRendToMain {
   StartAutosave = 'StartAutosave',
   /** Tell the main process that we crashed :( */
   WebPageCrashed = 'WebPageCrashed',
+  /** Tell main to prompt for a qbj file to import teams/rosters from */
+  LaunchImportQbjTeamWorkflow = 'LaunchImportQbjTeamWorkflow',
+  /** Tell main to prompt for an SQBS filoe to import teams/rosters from */
+  LaunchImportSqbsTeamWorkflow = 'LaunchImportSqbsTeamWorkflow',
+  /** Tell main to launch the stat report in an external browser window */
+  LaunchStatReportInBrowser = 'LaunchStatReportInBrowser',
+  /** Launch an arbitrary web page in an external browser window */
+  LaunchExternalWebPage = 'LaunchExternalWebPage',
 }
 
 /** Channels for main sending messages to renderer */
@@ -41,6 +51,18 @@ export enum IpcMainToRend {
   CheckForUnsavedData = 'CheckForUnsavedData',
   /** Save a backup copy of the current file */
   GenerateBackup = 'GenerateBackup',
+  /** Import an entire non-yft qbj file */
+  ImportQbjTournament = 'ImportQbjTournament',
+  /** Import teams and rosters from a non-yft qbj file */
+  ImportQbjTeams = 'ImportQbjTeams',
+  /** Import teams and rosters from an SQBS file */
+  ImportSqbsTeams = 'ImportSqbsTeams',
+  /** Send a message to display as a toast */
+  MakeToast = 'MakeToast',
+  /** Launch an informational help window */
+  LaunchAboutYf = 'LaunchAboutYf',
+  /** QBJ game import workflow, triggered by Main process */
+  ImportQbjGamesMainLaunch = 'ImportQbjGamesMainLaunch',
 }
 
 /** Channels for both directions renderer<-->main */
@@ -50,8 +72,14 @@ export enum IpcBidirectional {
   LoadBackup = 'LoadBackup',
   /** Export QBJ schema file format */
   ExportQbjFile = 'ExportQbjFile',
+  /** Import individual games from qbj files */
+  ImportQbjGamesRendererLaunch = 'ImportQbjGames',
   /** For asking for and receiving the app version number */
   GetAppVersion = 'GetAppVersion',
+  /** For the main process asking for and receiving SQBS files to save */
+  SqbsExport = 'SqbsExport',
+  /** See if there's a newer version the user should condider downloading */
+  CheckForNewVersion = 'CheckForNewVersion',
 }
 
 export type IpcChannels = IpcRendToMain | IpcMainToRend | IpcBidirectional;
@@ -67,5 +95,16 @@ export const rendererListenableEvents = [
   IpcMainToRend.RequestStatReport,
   IpcMainToRend.CheckForUnsavedData,
   IpcMainToRend.GenerateBackup,
+  IpcMainToRend.ImportQbjTournament,
+  IpcMainToRend.ImportQbjTeams,
+  IpcMainToRend.ImportSqbsTeams,
+  IpcMainToRend.MakeToast,
+  IpcMainToRend.ImportQbjGamesMainLaunch,
+  IpcMainToRend.LaunchAboutYf,
+  IpcBidirectional.LoadBackup,
   IpcBidirectional.ExportQbjFile,
+  IpcBidirectional.ImportQbjGamesRendererLaunch,
+  IpcBidirectional.GetAppVersion,
+  IpcBidirectional.SqbsExport,
+  IpcBidirectional.CheckForNewVersion,
 ];

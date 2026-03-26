@@ -29,9 +29,18 @@ import {
   handleLoadBackup,
   handleExportQbjFile,
   createDirectories,
+  importGamesFromQbjRendererLaunch,
+  readYftFileAndSendToRend,
+  handleLaunchImportQbjTeamsFromRenderer,
+  handleLaunchImportSqbsTeamsFromRenderer,
+  handleExportSqbsFile,
+  handleSetYftFilePath,
+  handlelaunchStatReportInBrowserWindow,
+  handleLaunchExternalWebPage,
 } from './FileUtils';
 import { IpcBidirectional, IpcRendToMain } from '../IPCChannels';
 import { FileSwitchActions, statReportProtocol } from '../SharedUtils';
+import { checkForNewVersions } from './UpdateChecker';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -56,7 +65,8 @@ if (process.env.NODE_ENV === 'production') {
 const isDebug = process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  require('electron-debug')();
+  const electronDebug = require('electron-debug');
+  (electronDebug.default ?? electronDebug)();
 }
 
 const installExtensions = async () => {
@@ -108,6 +118,11 @@ const createWindow = async () => {
     } else {
       mainWindow.show();
     }
+
+    const argsLength = process.defaultApp ? 3 : 2;
+    if (process.env.NODE_ENV === 'production' && process.argv.length >= argsLength) {
+      readYftFileAndSendToRend(mainWindow, process.argv[argsLength - 1]);
+    }
   });
 
   mainWindow.on('close', (e) => {
@@ -149,6 +164,7 @@ app
   .then(() => {
     createDirectories();
     createWindow();
+    ipcMain.on(IpcRendToMain.setYftFilePath, handleSetYftFilePath);
     ipcMain.on(IpcRendToMain.saveFile, handleSaveFile);
     ipcMain.on(IpcRendToMain.setWindowTitle, handleSetWindowTitle);
     ipcMain.on(IpcRendToMain.StatReportSaveDialog, handleRequestToSaveHtmlReports);
@@ -156,7 +172,14 @@ app
     ipcMain.on(IpcRendToMain.ContinueWithAction, handleContinueAction);
     ipcMain.on(IpcRendToMain.SaveBackup, handleSaveBackup);
     ipcMain.on(IpcRendToMain.WebPageCrashed, handleRendererCrashed);
+    ipcMain.on(IpcRendToMain.LaunchImportQbjTeamWorkflow, handleLaunchImportQbjTeamsFromRenderer);
+    ipcMain.on(IpcRendToMain.LaunchImportSqbsTeamWorkflow, handleLaunchImportSqbsTeamsFromRenderer);
     ipcMain.on(IpcBidirectional.ExportQbjFile, handleExportQbjFile);
+    ipcMain.on(IpcBidirectional.SqbsExport, handleExportSqbsFile);
+    ipcMain.on(IpcRendToMain.LaunchStatReportInBrowser, handlelaunchStatReportInBrowserWindow);
+    ipcMain.on(IpcRendToMain.LaunchExternalWebPage, handleLaunchExternalWebPage);
+    ipcMain.on(IpcBidirectional.CheckForNewVersion, checkForNewVersions);
+    ipcMain.handle(IpcBidirectional.ImportQbjGamesRendererLaunch, importGamesFromQbjRendererLaunch);
     ipcMain.once(IpcBidirectional.LoadBackup, handleLoadBackup);
     ipcMain.once(IpcRendToMain.StartAutosave, () => {
       setInterval(() => generateBackup(mainWindow), autoSaveIntervalMS);

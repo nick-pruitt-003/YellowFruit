@@ -1,8 +1,14 @@
 import path from 'path';
-import { app, BrowserWindow, IpcMainEvent, dialog } from 'electron';
+import { app, BrowserWindow, IpcMainEvent, dialog, IpcMainInvokeEvent, shell } from 'electron';
 import fs from 'fs';
 import { IpcBidirectional, IpcMainToRend } from '../IPCChannels';
-import { FileSwitchActions, StatReportHtmlPage, statReportProtocol } from '../SharedUtils';
+import {
+  FileSwitchActions,
+  IMatchImportFileRequest,
+  SqbsExportFile,
+  StatReportHtmlPage,
+  statReportProtocol,
+} from '../SharedUtils';
 
 export const inAppStatReportDirectory = path.resolve(app.getPath('userData'), 'StatReport');
 
@@ -10,6 +16,20 @@ const backupFileDir = path.resolve(app.getPath('userData'), 'yfBackup');
 const backupFilePathProd = path.resolve(backupFileDir, 'prod_backup.yftbak');
 const backupFilePathDev = path.resolve(backupFileDir, 'dev_backup.yftbak');
 const curBackupFilePath = process.env.NODE_ENV === 'development' ? backupFilePathDev : backupFilePathProd;
+
+/** The path of the file being edited in the renderer process */
+let curYftFilePath: string = '';
+
+function getCurYftFilePath() {
+  return curYftFilePath;
+}
+function setCurYftFilePath(newPath: string) {
+  curYftFilePath = newPath;
+}
+
+export function handleSetYftFilePath(event: IpcMainEvent, filePath: string) {
+  setCurYftFilePath(filePath);
+}
 
 /** Create necessary directories and files if they don't yet exist  */
 export function createDirectories() {
@@ -51,6 +71,9 @@ function doFileSwitchAction(action: FileSwitchActions, window: BrowserWindow) {
     case FileSwitchActions.OpenYftFile:
       openYftFile(window);
       break;
+    case FileSwitchActions.ImportQbjTournament:
+      importQbjTournament(window);
+      break;
     case FileSwitchActions.NewFile:
       newYftFile(window);
       break;
@@ -78,12 +101,78 @@ function openYftFile(mainWindow: BrowserWindow) {
   });
   if (!fileNameAry) return;
 
+  readYftFileAndSendToRend(mainWindow, fileNameAry[0]);
+}
+
+export function readYftFileAndSendToRend(mainWindow: BrowserWindow, filePath: string) {
+  fs.readFile(filePath, { encoding: 'utf8' }, (err, fileContents) => {
+    if (err) {
+      dialog.showMessageBoxSync(mainWindow, { message: `Error reading file: \n\n ${err.message}` });
+      return;
+    }
+    mainWindow.webContents.send(IpcMainToRend.openYftFile, filePath, fileContents, app.getVersion());
+  });
+}
+
+function importQbjTournament(mainWindow: BrowserWindow) {
+  const fileNameAry = dialog.showOpenDialogSync(mainWindow, {
+    title: 'Open File',
+    filters: [{ name: 'Tournament Schema', extensions: ['qbj', 'json'] }],
+  });
+  if (!fileNameAry) return;
+
   fs.readFile(fileNameAry[0], { encoding: 'utf8' }, (err, fileContents) => {
     if (err) {
       dialog.showMessageBoxSync(mainWindow, { message: `Error reading file: \n\n ${err.message}` });
       return;
     }
-    mainWindow.webContents.send(IpcMainToRend.openYftFile, fileNameAry[0], fileContents, app.getVersion());
+    mainWindow.webContents.send(IpcMainToRend.ImportQbjTournament, fileNameAry[0], fileContents);
+  });
+}
+
+export function handleLaunchImportQbjTeamsFromRenderer(event: IpcMainEvent) {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return;
+
+  importQbjTeams(window);
+}
+
+export function importQbjTeams(mainWindow: BrowserWindow) {
+  const fileNameAry = dialog.showOpenDialogSync(mainWindow, {
+    title: 'Import Teams',
+    filters: [{ name: 'Tournament Schema', extensions: ['qbj', 'json'] }],
+  });
+  if (!fileNameAry) return;
+
+  fs.readFile(fileNameAry[0], { encoding: 'utf8' }, (err, fileContents) => {
+    if (err) {
+      dialog.showMessageBoxSync(mainWindow, { message: `Error reading file: \n\n ${err.message}` });
+      return;
+    }
+    mainWindow.webContents.send(IpcMainToRend.ImportQbjTeams, fileContents);
+  });
+}
+
+export function handleLaunchImportSqbsTeamsFromRenderer(event: IpcMainEvent) {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return;
+
+  importSqbsTeams(window);
+}
+
+export function importSqbsTeams(mainWindow: BrowserWindow) {
+  const fileNameAry = dialog.showOpenDialogSync(mainWindow, {
+    title: 'Import Teams',
+    filters: [{ name: 'SQBS Tournament', extensions: ['sqbs'] }],
+  });
+  if (!fileNameAry) return;
+
+  fs.readFile(fileNameAry[0], { encoding: 'utf8' }, (err, fileContents) => {
+    if (err) {
+      dialog.showMessageBoxSync(mainWindow, { message: `Error reading file: \n\n ${err.message}` });
+      return;
+    }
+    mainWindow.webContents.send(IpcMainToRend.ImportSqbsTeams, fileContents);
   });
 }
 
@@ -163,7 +252,9 @@ function writeStatReportFile(
     }
     if (idx < reports.length - 1) {
       writeStatReportFile(reports, idx + 1, window, externalFilePathStart);
-    } else if (!externalFilePathStart) {
+    } else if (externalFilePathStart) {
+      window.webContents.send(IpcMainToRend.MakeToast, 'Stat report exported');
+    } else {
       window.webContents.send(IpcMainToRend.GeneratedInAppStatReport);
     }
   });
@@ -191,9 +282,13 @@ export function handleRequestToSaveHtmlReports(event: IpcMainEvent, curFileName?
   promptForStatReportLocation(window, curFileName);
 }
 
-export function promptForStatReportLocation(window: BrowserWindow, curFileName?: string) {
+export function promptForStatReportLocation(window: BrowserWindow, fileNameFromRenderer?: string) {
+  let defaultPath: string | undefined;
+  if (fileNameFromRenderer) defaultPath = stripYftExtension(fileNameFromRenderer);
+  else if (getCurYftFilePath()) defaultPath = stripYftExtension(getCurYftFilePath());
+
   const fileName = dialog.showSaveDialogSync(window, {
-    defaultPath: curFileName ? stripYftExtension(curFileName) : undefined,
+    defaultPath,
     filters: [{ name: 'HTML Webpages', extensions: ['html'] }],
   });
 
@@ -242,6 +337,7 @@ export function exportQbjFile(mainWindow: BrowserWindow) {
   const filePath = dialog.showSaveDialogSync(mainWindow, {
     title: 'Export as QBJ',
     filters: [{ name: 'Quiz Bowl Tournament Schema', extensions: ['qbj'] }],
+    defaultPath: getCurYftFilePath() !== '' ? stripYftExtension(getCurYftFilePath()) : undefined,
   });
   if (!filePath) return;
 
@@ -255,5 +351,84 @@ export function handleExportQbjFile(event: IpcMainEvent, filePath: string, fileC
 
   fs.writeFile(filePath, fileContents, { encoding: 'utf8' }, (err) => {
     if (err) dialog.showMessageBoxSync(window, { title: 'YellowFruit', message: `Error saving file:\n\n${err}` });
+    else window.webContents.send(IpcMainToRend.MakeToast, 'Exported QBJ file');
   });
+}
+
+/** Tell renderer to export SQBS file(s) to the given path */
+export function launchSqbsExportWorkflow(mainWindow: BrowserWindow) {
+  mainWindow.webContents.send(IpcBidirectional.SqbsExport);
+}
+
+export function handleExportSqbsFile(event: IpcMainEvent, files: SqbsExportFile[]) {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return;
+
+  const filePathStart = dialog.showSaveDialogSync(window, {
+    title: 'Export as SQBS',
+    filters: [{ name: 'SQBS Tournament', extensions: ['sqbs'] }],
+  });
+  if (!filePathStart) return;
+
+  writeSqbsFile(files, 0, window, filePathStart);
+}
+
+function writeSqbsFile(files: SqbsExportFile[], idx: number, window: BrowserWindow, filePathStart: string) {
+  const file = files[idx];
+  if (!file) return;
+
+  const filePath = file.fileSuffix ? `${filePathStart.replace('.sqbs', '')}_${file.fileSuffix}.sqbs` : filePathStart;
+
+  fs.writeFile(filePath, file.contents, { encoding: 'utf-8' }, (err) => {
+    if (err) {
+      dialog.showMessageBoxSync(window, { message: `Error generating file ${filePath}:\n\n${err.message}` });
+      return;
+    }
+    if (idx < files.length - 1) {
+      writeSqbsFile(files, idx + 1, window, filePathStart);
+    } else {
+      const toastMsg = files.length > 1 ? 'SQBS files exported' : 'SQBS file exported';
+      window.webContents.send(IpcMainToRend.MakeToast, toastMsg);
+    }
+  });
+}
+
+export function importGamesFromQbjMainLaunch(window: BrowserWindow) {
+  const fileAry = promptForQbjGamesToImport(window);
+  window.webContents.send(IpcMainToRend.ImportQbjGamesMainLaunch, fileAry);
+}
+
+export async function importGamesFromQbjRendererLaunch(event: IpcMainInvokeEvent) {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return [];
+
+  return promptForQbjGamesToImport(window);
+}
+
+function promptForQbjGamesToImport(window: BrowserWindow) {
+  const fileNameAry = dialog.showOpenDialogSync(window, {
+    title: 'Import Games',
+    filters: [{ name: 'Tournament Schema ', extensions: ['qbj', 'json'] }],
+    properties: ['multiSelections', 'openFile'],
+  });
+  if (!fileNameAry) return [];
+
+  const fileAry: IMatchImportFileRequest[] = [];
+  for (const filePath of fileNameAry) {
+    const fileContents = fs.readFileSync(filePath, { encoding: 'utf8' });
+    fileAry.push({ filePath, fileContents });
+  }
+  return fileAry;
+}
+
+export function handlelaunchStatReportInBrowserWindow() {
+  shell.openExternal(path.resolve(inAppStatReportDirectory, 'standings.html'));
+}
+
+export function handleLaunchExternalWebPage(event: IpcMainEvent, url: string) {
+  shell.openExternal(url);
+}
+
+export function launchHelpWindow(mainWindow: BrowserWindow) {
+  mainWindow.webContents.send(IpcMainToRend.LaunchAboutYf);
 }

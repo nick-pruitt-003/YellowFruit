@@ -7,6 +7,7 @@ export enum CommonRuleSets {
   NaqtUntimed = 'NaqtUntimed',
   NaqtTimed = 'NaqtTimed',
   Acf = 'Acf',
+  AcfPowers = 'mAcfPowers',
 }
 
 /**
@@ -112,6 +113,10 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
     if (this.bonusDivisor % 10) {
       divisor = 5;
     }
+    if (this.lightningCountPerTeam > 0) {
+      if (this.lightningDivisor % 5) return 1;
+      if (this.lightningDivisor % 10) divisor = 5;
+    }
     return divisor;
   }
 
@@ -132,6 +137,8 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
 
   lightningCountPerTeam: number = 0;
 
+  lightningDivisor: number = 10;
+
   answerTypes: AnswerType[] = [];
 
   get id(): string {
@@ -141,7 +148,7 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
   /** The maximum number of answer types that can be defined for a single tournament */
   static maximumAnswerTypes = 6;
 
-  constructor(ruleSet: CommonRuleSets = CommonRuleSets.NaqtUntimed) {
+  constructor(ruleSet: CommonRuleSets = CommonRuleSets.AcfPowers) {
     this.applyRuleSet(ruleSet);
   }
 
@@ -151,6 +158,14 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
     const neg = new AnswerType(-5);
 
     switch (ruleSet) {
+      case CommonRuleSets.AcfPowers:
+        this.timed = false;
+        this.maximumRegulationTossupCount = 20;
+        this.minimumOvertimeQuestionCount = 1;
+        this.useBonuses = true;
+        this.bonusesBounceBack = false;
+        this.answerTypes = [power15, ten, neg];
+        break;
       case CommonRuleSets.Acf:
         this.timed = false;
         this.maximumRegulationTossupCount = 20;
@@ -187,6 +202,7 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
     this.maximumPartsPerBonus = 3;
     this.pointsPerBonusPart = 10;
     this.lightningCountPerTeam = 0;
+    this.lightningDivisor = 10;
   }
 
   toFileObject(qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjScoringRules {
@@ -209,6 +225,9 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
       qbjObject.pointsPerBonusPart = this.pointsPerBonusPart;
       qbjObject.bonusDivisor = this.bonusDivisor;
     }
+    if (this.useLightningRounds()) {
+      qbjObject.lightningDivisor = this.lightningDivisor;
+    }
 
     if (isTopLevel) qbjObject.type = QbjTypeNames.ScoringRules;
     if (isReferenced) qbjObject.id = this.id;
@@ -226,8 +245,10 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
 
   static getRuleSetName(ruleSet: CommonRuleSets) {
     switch (ruleSet) {
+      case CommonRuleSets.AcfPowers:
+        return 'ACF with powers';
       case CommonRuleSets.Acf:
-        return 'ACF';
+        return 'ACF (standard)';
       case CommonRuleSets.NaqtTimed:
         return 'NAQT (timed)';
       case CommonRuleSets.NaqtUntimed:
@@ -270,11 +291,26 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
     return this.bonusesAreRegular();
   }
 
+  useLightningRounds() {
+    return this.lightningCountPerTeam > 0;
+  }
+
+  useOvertimeInPPTUH() {
+    return this.overtimeIncludesBonuses || !this.useBonuses;
+  }
+
   setUseBonuses(useBonuses: boolean) {
     this.useBonuses = useBonuses;
     if (!useBonuses) {
       this.bonusesBounceBack = false;
       this.overtimeIncludesBonuses = false;
     }
+  }
+
+  findAnswerTypeById(id: string) {
+    for (const at of this.answerTypes) {
+      if (at.id === id) return at;
+    }
+    return undefined;
   }
 }

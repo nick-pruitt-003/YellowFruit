@@ -93,9 +93,6 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
   /** Code to help users understand the order of phases: 1, 2, 2A, etc. */
   code: string = '';
 
-  /** The number of tiers. Should be consistent with the position property of the pools in this phase */
-  // tiers: number = 1;
-
   rounds: Round[];
 
   pools: Pool[] = [];
@@ -203,6 +200,17 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
     }
   }
 
+  assignPhaseNameToRoundNames() {
+    this.rounds.forEach((rd) => {
+      rd.name = this.name;
+    });
+  }
+
+  /** Remove special round names - changes back to just round numbers */
+  resetRoundNamesToNumeric() {
+    this.rounds.forEach((rd) => rd.resetToNumeric());
+  }
+
   /** Set this phase's rounds to be from firstRound to lastRound. Existing rounds within this range are preserved; others are discarded.
    *  Caller is responsible for determining that this is safe to do.
    */
@@ -210,7 +218,7 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
     const newRoundArray: Round[] = [];
     let curRequestedRound = firstRound;
     for (const rd of this.rounds) {
-      if (rd.number > lastRound) break;
+      if (rd.number > lastRound || rd.number < firstRound) break;
 
       if (rd.number > curRequestedRound) {
         for (let i = curRequestedRound; i < rd.number; i++) {
@@ -226,6 +234,23 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
     this.rounds = newRoundArray;
   }
 
+  convertToTiebreaker() {
+    this.convertToMinorPhase(PhaseTypes.Tiebreaker);
+  }
+
+  convertToFinals() {
+    this.convertToMinorPhase(PhaseTypes.Finals);
+  }
+
+  /** Convert this phase from a normal prelim/playoff phase to something else */
+  private convertToMinorPhase(newType: PhaseTypes) {
+    if (this.phaseType === PhaseTypes.Prelim) return;
+
+    this.phaseType = newType;
+    this.pools = [];
+    this.forceNumericRounds = true;
+  }
+
   /** Do any pools have errors that need to be corrected right now? */
   anyPoolErrors() {
     for (const p of this.pools) {
@@ -234,9 +259,11 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
     return false;
   }
 
-  /** Add a pool with default info, to be customized by the user */
-  addBlankPool() {
-    const size = this.defaultSizeForBlankPool();
+  /** Add a pool with default info, to be customized by the user
+   * @param minTeams The pool must have at least this many teams
+   */
+  addBlankPool(minTeams?: number) {
+    const size = Math.max(this.defaultSizeForBlankPool(), minTeams ?? 0);
     const tier = this.lowestPoolTier() + 1;
     if (!this.findPoolByName('New Pool')) {
       this.pools.push(new Pool(size, tier, 'New Pool'));
@@ -254,11 +281,11 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
 
   /** Find a resonable size to use as the default for the next new pool the user adds */
   private defaultSizeForBlankPool() {
-    if (this.pools.length === 0) return 2;
+    if (this.pools.length === 0) return 4;
 
     const existingPoolsSize = this.pools[0].size;
     for (let i = 1; i < this.pools.length; i++) {
-      if (this.pools[i].size !== existingPoolsSize) return 2;
+      if (this.pools[i].size !== existingPoolsSize) return 4;
     }
     return existingPoolsSize;
   }
@@ -398,6 +425,19 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
     return this.rounds.map((rd) => rd.getCarryoverMatches(playoffPhase)).flat();
   }
 
+  /** A list of all the phases that at least one match in this phase is carried over to */
+  getPhasesCarriedOverTo() {
+    const phasesFound: Phase[] = [];
+    for (const rd of this.rounds) {
+      for (const m of rd.matches) {
+        for (const coPh of m.carryoverPhases) {
+          if (phasesFound.indexOf(coPh) === -1) phasesFound.push(coPh);
+        }
+      }
+    }
+    return phasesFound;
+  }
+
   /** Find the matches that involve at least one team in the given pool. If no pool is passed, all matches are returned */
   getMatchesForPool(pool?: Pool) {
     const allMatches = this.getAllMatches();
@@ -447,6 +487,30 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
 
   getRound(roundNo: number): Round | undefined {
     return this.rounds.find((rd) => rd.number === roundNo);
+  }
+
+  /** For a finals or tiebreaker phase, should we disallow unchecking "use numeric rounds"? */
+  preventConvertToNonNumericRounds() {
+    let numRoundsWithGames = 0;
+    for (const rd of this.rounds) {
+      if (rd.anyMatchesExist()) numRoundsWithGames++;
+
+      if (numRoundsWithGames > 1) return true;
+    }
+    return false;
+  }
+
+  deleteEmptyRounds() {
+    if (this.rounds.length === 0) return;
+
+    const firstRound = this.rounds[0];
+    this.rounds = this.rounds.filter((rd) => rd.anyMatchesExist());
+    if (this.rounds.length === 0) this.rounds.push(firstRound); // a phase should never have 0 rounds
+  }
+
+  /** Do any rounds in this phase have a packet name defined? */
+  packetNamesExist() {
+    return !!this.rounds.find((rd) => rd.packet.name !== '');
   }
 
   /**
@@ -531,6 +595,29 @@ export class Phase implements IQbjPhase, IYftDataModelObject {
 
     const [poolToMove] = this.pools.splice(positionDragged, 1);
     this.pools.splice(positionDroppedOn, 0, poolToMove);
+  }
+
+  /** Find all the matches involving at least one team in this pool. Set each matche's validation for whether both teams are in the same pool. */
+  revalidateMatchesForPoolCompatibility(pool: Pool) {
+    for (const rd of this.rounds) {
+      for (const m of rd.matches) {
+        const leftTeam = m.getMatchTeam('left').team;
+        const rightTeam = m.getMatchTeam('right').team;
+        if (!leftTeam || !rightTeam) continue;
+
+        const leftPool = this.findPoolWithTeam(leftTeam);
+        const rightPool = this.findPoolWithTeam(rightTeam);
+        if (leftPool === pool || rightPool === pool) {
+          m.setSamePoolValidation(leftPool === rightPool, true);
+        }
+      }
+    }
+  }
+
+  /** Find all the matches involving at least one team in the pool with this seed. Set each matche's validation for whether both teams are in the same pool. */
+  revalidateMatchesForPoolCompatFromSeed(seed: number) {
+    const pool = this.findPoolWithSeed(seed);
+    if (pool) this.revalidateMatchesForPoolCompatibility(pool);
   }
 
   /** Discard information that we only want to track if we're using a schedule template */

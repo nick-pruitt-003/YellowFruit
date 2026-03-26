@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // Allows '.ts' extensions in import paths, required for Node.js native ESM resolution
+    "allowImportingTsExtensions": true,
+    // Required when allowImportingTsExtensions is true — these configs are never emitted by tsc
+    "noEmit": true
+  }
+}

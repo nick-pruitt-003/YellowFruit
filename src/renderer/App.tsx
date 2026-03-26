@@ -10,9 +10,11 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import Box from '@mui/material/Box';
-
 import { useContext, useEffect, useState } from 'react';
-import NavBar from './Components/NavBar';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { Alert, AlertColor, IconButton, Snackbar, Tooltip } from '@mui/material';
+import { Close, Launch } from '@mui/icons-material';
+import NavBar, { applicationPageOrder } from './Components/NavBar';
 import GeneralPage from './Components/GeneralPage';
 import { TournamentManager, TournamentContext } from './TournamentManager';
 import RulesPage from './Components/RulesPage';
@@ -28,9 +30,13 @@ import PhaseEditDialog from './Components/PhaseEditDialog';
 import PoolEditDialog from './Components/PoolEditDialog';
 import RankEditDialog from './Components/RankEditDialog';
 import { IpcRendToMain } from '../IPCChannels';
+import PoolAssignmentDialog from './Components/PoolAssignmentDialog';
+import MatchImportResultDialog from './Components/MatchImportResultDialog';
+import SqbsExportDialog from './Components/SqbsExportDialog';
+import AboutYfDialog from './Components/AboutYfDialog';
 
 window.onerror = () => window.electron.ipcRenderer.sendMessage(IpcRendToMain.WebPageCrashed);
-window.electron.ipcRenderer.removeAllListeners();
+window.electron.ipcRenderer.removeAllListeners(); // needed in dev environemnt so that you don't end up with duplicate listers when the app reloads
 const tournManager = new TournamentManager();
 
 export default function App() {
@@ -79,6 +85,21 @@ function TournamentEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mgr, mgr.tournament]);
 
+  useHotkeys('alt+shift+right', () => {
+    if (!mgr.anyModalOpen()) {
+      const activePageIdx = applicationPageOrder.indexOf(activePage);
+      setactivePage(applicationPageOrder[(activePageIdx + 1) % applicationPageOrder.length]);
+    }
+  });
+  useHotkeys('alt+shift+left', () => {
+    if (!mgr.anyModalOpen()) {
+      const activePageIdx = applicationPageOrder.indexOf(activePage);
+      setactivePage(
+        applicationPageOrder[(activePageIdx - 1 + applicationPageOrder.length) % applicationPageOrder.length],
+      );
+    }
+  });
+
   const changePage = (page: ApplicationPages) => {
     if (page === ApplicationPages.StatReport) {
       mgr.generateHtmlReport();
@@ -100,6 +121,11 @@ function TournamentEditor() {
       <PhaseEditDialog />
       <PoolEditDialog />
       <RankEditDialog />
+      <PoolAssignmentDialog />
+      <MatchImportResultDialog />
+      <SqbsExportDialog />
+      <AboutYfDialog />
+      <GenericToast />
     </>
   );
 }
@@ -127,4 +153,52 @@ function ActivePage(props: IActivePageProps) {
     default:
       return null;
   }
+}
+
+/** Toast message that the TournamentManager can invoke imperatively */
+function GenericToast() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [severity, setSeverity] = useState<AlertColor>('success');
+  const [urlToLaunch, setUrlToLaunch] = useState('');
+  const [mgr] = useState(tournManager);
+  useEffect(() => {
+    mgr.makeToast = (msg, sev = 'success', url = '') => {
+      setIsOpen(true);
+      setMessage(msg);
+      setSeverity(sev);
+      setUrlToLaunch(url);
+    };
+  }, [mgr]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+  const handleLaunchUrl = () => {
+    mgr.launchWebPageInBrowserWindow(urlToLaunch);
+    handleClose();
+  };
+
+  const durationMs = urlToLaunch !== '' ? 15000 : 5000;
+  const action =
+    urlToLaunch === '' ? null : (
+      <>
+        <Tooltip title="Download the lastest version from GitHub">
+          <IconButton color="inherit" size="small" onClick={handleLaunchUrl}>
+            <Launch fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <IconButton color="inherit" size="small" onClick={handleClose}>
+          <Close fontSize="small" />
+        </IconButton>
+      </>
+    );
+
+  return (
+    <Snackbar open={isOpen} autoHideDuration={durationMs} onClose={handleClose}>
+      <Alert severity={severity} variant="filled" onClose={handleClose} action={action} sx={{ width: '100%' }}>
+        {message}
+      </Alert>
+    </Snackbar>
+  );
 }

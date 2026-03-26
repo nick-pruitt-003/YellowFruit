@@ -27,6 +27,13 @@ export function dateFieldChanged(oldVal: Dayjs | null, newVal: Dayjs | null): bo
   return oldVal.unix() !== newVal.unix();
 }
 
+/** Parse an integer from a string, substituting a default value if nothing valid can be parsed  */
+export function parseAndValidateStringToInt(str: string, deflt: number, lowerBound?: number, upperBound?: number) {
+  if (str === '') return deflt;
+  if (invalidInteger(str, lowerBound, upperBound)) return deflt;
+  return parseInt(str, 10);
+}
+
 /** Is this string an integer within the given bounds? (Empty string is valid) */
 export function invalidInteger(str: string, lowerBound?: number, upperBound?: number) {
   if (str === '') return false;
@@ -85,8 +92,8 @@ export function isNormalTeamLetter(letter: string) {
  * @return      true if a is less than b
  */
 export function versionLt(a: string, b: string, type?: 'major' | 'minor' | 'patch'): boolean {
-  const aSplit = a.split('.');
-  const bSplit = b.split('.');
+  const aSplit = getVersionNumbers(a);
+  const bSplit = getVersionNumbers(b);
   if (aSplit[0] !== bSplit[0]) {
     return aSplit[0] < bSplit[0];
   }
@@ -102,7 +109,24 @@ export function versionLt(a: string, b: string, type?: 'major' | 'minor' | 'patc
   return aSplit[2] < bSplit[2];
 }
 
+/** Conver a version string like '1.2.3' to an array of numbers */
+function getVersionNumbers(versionString: string) {
+  return versionString.split('.').map((val) => parseInt(val, 10));
+}
+
 export function getFileNameFromPath(path: string) {
   const filePathSegments = path.split(/[\\/]/);
   return filePathSegments.pop();
+}
+
+/** Truncate a string to a desired length, appending an ellipsis if truncation was done */
+export function trunc(s: string, size: number) {
+  if (s.length <= size) return s;
+  return `${s.substring(0, size).trim()}...`;
+}
+
+/** Returns Ctrl or ⌘, for showing keyboard shortcuts */
+export function CtrlOrCmd() {
+  if (window.electron.getPlatform() === 'darwin') return String.fromCharCode(0x2318);
+  return 'Ctrl';
 }

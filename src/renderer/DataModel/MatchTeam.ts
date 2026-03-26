@@ -112,11 +112,14 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   toFileObject(qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjMatchTeam {
+    // Don't save both total score and bonus points when they're redundant. QBJ schema prefers bonus points
+    const saveBonusInsteadOfTotal = qbjOnly && this.playerLevelStatsExist();
+
     const qbjObject: IQbjMatchTeam = {
       team: this.team?.toRefPointer(),
       forfeitLoss: this.forfeitLoss,
-      points: this.points,
-      bonusPoints: this.getBonusPoints(),
+      points: saveBonusInsteadOfTotal ? undefined : this.points,
+      bonusPoints: saveBonusInsteadOfTotal ? this.getBonusPoints() : undefined,
       correctTossupsWithoutBonuses: this.getCorrectTossupsWithoutBonuses(),
       bonusBouncebackPoints: this.bonusBouncebackPoints,
       lightningPoints: this.lightningPoints,
@@ -132,6 +135,19 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     };
     const yftFileObj: IYftFileMatchTeam = { YfData: yfData, ...qbjObject };
     return yftFileObj;
+  }
+
+  /**
+   * Are there player-level stats for this match, as opposed to just team scores?
+   */
+  // eslint-disable-next-line class-methods-use-this
+  playerLevelStatsExist() {
+    return true; // right now, we require entering individual stats
+  }
+
+  /** For a match that's supposed to have player-level stats, has any player tossup data been entered? */
+  anyPlayerStatsEntered() {
+    return !!this.matchPlayers.find((mp) => mp.anyStatsEntered());
   }
 
   /** For each players on the roster that don't have a MatchPlayer object, make one */
@@ -203,6 +219,12 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     return teamAnswerCounts;
   }
 
+  /** Set the points attribute based on a known number of bonus points */
+  calculateTotalPoints(bonusPoints: number) {
+    this.points =
+      this.getTossupPoints() + bonusPoints + (this.bonusBouncebackPoints || 0) + (this.lightningPoints || 0);
+  }
+
   /** Number of points scored on tossups */
   getTossupPoints(): number {
     let total = 0;
@@ -244,7 +266,7 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
 
   /** Total points minus points scored in overtime without bonuses */
   getPointsForPPG(scoringRules: ScoringRules): number {
-    if (!scoringRules.useBonuses || scoringRules.overtimeIncludesBonuses) {
+    if (scoringRules.useOvertimeInPPTUH()) {
       return this.points || 0;
     }
     return (this.points || 0) - this.getOvertimePoints();
@@ -313,13 +335,59 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     return errs;
   }
 
+  getWarningMessages(): string[] {
+    let warnings: string[] = [];
+    if (this.totalScoreFieldValidation.status === ValidationStatuses.Warning) {
+      warnings.push(`${this.team?.name || 'Total'} score: ${this.totalScoreFieldValidation.message}`);
+    }
+    if (this.bouncebackFieldValidation.status === ValidationStatuses.Warning) {
+      warnings.push(`${this.team?.name || ''} Bounceback points: ${this.bouncebackFieldValidation.message}`);
+    }
+    warnings = warnings.concat(this.modalBottomValidation.getWarningMessages());
+    this.matchPlayers.forEach((mp) => {
+      warnings = warnings.concat(mp.getWarningMessages());
+    });
+    this.overTimeBuzzes.forEach((ac) => {
+      warnings = warnings.concat(ac.getWarningMessages());
+    });
+    return warnings;
+  }
+
+  getNumSuppresedMsgs() {
+    let cnt = 0;
+    if (this.totalScoreFieldValidation.isSuppressed) cnt++;
+    if (this.bouncebackFieldValidation.isSuppressed) cnt++;
+    cnt += this.modalBottomValidation.getNumSuppressedMsgs();
+    this.matchPlayers.forEach((mp) => {
+      cnt += mp.getNumSuppressedMsgs();
+    });
+    this.overTimeBuzzes.forEach((ac) => {
+      cnt += ac.getNumSuppressedMsgs();
+    });
+    return cnt;
+  }
+
+  restoreSuppressedMsgs() {
+    this.totalScoreFieldValidation.isSuppressed = false;
+    this.bouncebackFieldValidation.isSuppressed = false;
+    this.modalBottomValidation.restoreSuppressedMsgs();
+    this.matchPlayers.forEach((mp) => {
+      mp.restoreSuppressedMsgs();
+    });
+    this.overTimeBuzzes.forEach((ac) => {
+      ac.restoreSuppressedMsgs();
+    });
+  }
+
   validateAll(scoringRules: ScoringRules) {
     this.validateTotalPoints();
     this.validateTotalAndTuPtsEqual(scoringRules);
-    this.validateBouncebackPoints();
+    this.validateBouncebackPoints(scoringRules);
     this.validateAnswerCounts();
     this.validateBonusPoints(scoringRules);
     this.validateOvertimeBuzzes();
+    this.validateTotalAndLightningPoints(scoringRules);
+    this.validateLightningPoints(scoringRules);
   }
 
   clearValidation() {
@@ -345,32 +413,74 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     this.totalScoreFieldValidation.setOk();
   }
 
-  /** If not using bonuses, player TU points must add up to the final score */
+  /** If not using bonuses or lightning rounds, player TU points must add up to the final score */
   validateTotalAndTuPtsEqual(scoringRules: ScoringRules) {
-    if (scoringRules.useBonuses) return;
+    if (scoringRules.useBonuses || scoringRules.useLightningRounds()) return;
     if (this.points === undefined) return;
 
     if (this.getTossupPoints() !== this.points) {
       this.addValidationMessage(
         MatchValidationType.TotalScoreAndTuPtsMismatch,
         ValidationStatuses.Error,
-        "Players's points don't add up to total score",
+        "Players' points don't add up to total score",
       );
     } else {
       this.clearValidationMessage(MatchValidationType.TotalScoreAndTuPtsMismatch);
     }
   }
 
-  validateBouncebackPoints() {
+  /** If useing lightning rounds but NOT bonuses, adding lightning points to player TU points must equal the final score  */
+  validateTotalAndLightningPoints(scoringRules: ScoringRules) {
+    if (scoringRules.useBonuses) return;
+    if (!scoringRules.useLightningRounds()) return;
+    if (this.points === undefined) return;
+
+    if (this.getTossupPoints() + (this.lightningPoints ?? 0) !== this.points) {
+      this.addValidationMessage(
+        MatchValidationType.TuPlusLtngNotEqualTotal,
+        ValidationStatuses.Error,
+        'Player tossup points plus lightning points should equal total score',
+      );
+    } else {
+      this.clearValidationMessage(MatchValidationType.TuPlusLtngNotEqualTotal);
+    }
+  }
+
+  validateLightningPoints(scoringRules: ScoringRules) {
+    if (!scoringRules.useLightningRounds()) return;
+    if ((this.lightningPoints ?? 0) % scoringRules.lightningDivisor > 0) {
+      this.addValidationMessage(
+        MatchValidationType.LightningDivisorMismatch,
+        ValidationStatuses.Warning,
+        `Lightning round points aren't divisble by ${scoringRules.lightningDivisor}`,
+      );
+    } else {
+      this.clearValidationMessage(MatchValidationType.LightningDivisorMismatch);
+    }
+  }
+
+  validateBouncebackPoints(scoringRules: ScoringRules) {
     if (this.bonusBouncebackPoints === undefined) {
       this.bouncebackFieldValidation.setOk();
+      this.clearValidationMessage(MatchValidationType.BouncebackDivisorMismatch);
       return;
     }
     if (this.bonusBouncebackPoints < 0 || this.bonusBouncebackPoints > 9999) {
       this.bouncebackFieldValidation.setError('Invalid number');
+      this.clearValidationMessage(MatchValidationType.BouncebackDivisorMismatch);
       return;
     }
     this.bouncebackFieldValidation.setOk();
+
+    if (this.bonusBouncebackPoints % scoringRules.bonusDivisor !== 0) {
+      this.addValidationMessage(
+        MatchValidationType.BouncebackDivisorMismatch,
+        ValidationStatuses.Warning,
+        `Bonus bounceback points aren't divisible by ${scoringRules.bonusDivisor}`,
+      );
+    } else {
+      this.clearValidationMessage(MatchValidationType.BouncebackDivisorMismatch);
+    }
   }
 
   validateAnswerCounts() {
@@ -397,7 +507,7 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     if ((bonusPoints > 0 && bonusesHeard === 0) || ppb > maxPpb) {
       this.addValidationMessage(
         MatchValidationType.BonusPointsTooHigh,
-        bonusesHeard > 0 ? ValidationStatuses.Error : ValidationStatuses.HiddenError,
+        this.anyPlayerStatsEntered() ? ValidationStatuses.Error : ValidationStatuses.HiddenError,
         `Points per bonus exceeds the maximum of ${maxPpb}`,
       );
     } else {
@@ -409,7 +519,6 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
         MatchValidationType.BonusDivisorMismatch,
         ValidationStatuses.Warning,
         `Bonus points are not divisible by ${scoringRules.bonusDivisor}`,
-        true,
       );
     } else {
       this.clearValidationMessage(MatchValidationType.BonusDivisorMismatch);
@@ -422,13 +531,8 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     }
   }
 
-  addValidationMessage(
-    type: MatchValidationType,
-    status: ValidationStatuses,
-    message: string,
-    suppressable: boolean = false,
-  ) {
-    const fullMessage = `${this.team ? `${this.team.name}: ` : ''}${message}`;
+  addValidationMessage(type: MatchValidationType, status: ValidationStatuses, message: string, suppressable?: boolean) {
+    const fullMessage = `${this.team ? `${this.team.getTruncatedName()}: ` : ''}${message}`;
     this.modalBottomValidation.addValidationMsg(type, status, fullMessage, suppressable);
   }
 

@@ -1,10 +1,11 @@
 import { HelpOutline } from '@mui/icons-material';
-import { TextField, Tooltip } from '@mui/material';
+import { Tooltip } from '@mui/material';
 import { useContext } from 'react';
 import YfCard from './YfCard';
 import useSubscription from '../Utils/CustomHooks';
 import { TournamentContext } from '../TournamentManager';
 import { ScoringRules } from '../DataModel/ScoringRules';
+import { YfNumericField } from '../Utils/GeneralReactUtils';
 
 const maxPlayersFieldHelpText = 'The maximum number of players that can be active for one team at once';
 
@@ -33,12 +34,11 @@ function MaxPlayersSettingsCard() {
 
   return (
     <YfCard title="Players">
-      <TextField
-        sx={{ marginTop: 1, width: '13ch' }}
+      <YfNumericField
+        sx={{ marginTop: 1, width: '14ch' }}
         size="small"
-        type="number"
         inputProps={{ min: 1, disabled: readOnly }}
-        label="Max Per Team"
+        label="Max Active/Team"
         value={numPlayers}
         error={!numPlayersIsValid()}
         onChange={(e) => setNumPlayers(e.target.value)}

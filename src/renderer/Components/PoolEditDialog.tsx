@@ -15,16 +15,16 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { HelpOutline } from '@mui/icons-material';
+import { Delete, HelpOutline } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
 import useSubscription from '../Utils/CustomHooks';
-import { hotkeyFormat } from '../Utils/GeneralReactUtils';
+import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
 import { PoolEditModalContext } from '../Modal Managers/TempPoolManager';
 
 const carryoverFieldTooltip =
-  "Include previous rounds' matches in the pool standings where both teams are in this pool?";
+  "Include previous rounds' matches in the pool standings where both teams are in this pool? Usually this should only done when needed to complete a round robin.";
 
 export default function PoolEditDialog() {
   const tournManager = useContext(TournamentContext);
@@ -90,18 +90,20 @@ function PoolEditDialogCore() {
       <DialogActions sx={{ justifyContent: 'space-between' }}>
         <div>
           {allowCustomSched && (
-            <Button variant="outlined" color="warning" disabled={deleteionDisabled} onClick={handleDelete}>
+            <Button
+              variant="outlined"
+              color="warning"
+              disabled={deleteionDisabled}
+              onClick={handleDelete}
+              startIcon={<Delete />}
+            >
               Delete
             </Button>
           )}
         </div>
         <Box sx={{ '& .MuiButton-root': { marginLeft: 1 } }}>
-          <Button variant="outlined" onClick={handleCancel}>
-            {hotkeyFormat('&Cancel')}
-          </Button>
-          <Button variant="outlined" onClick={handleAccept} disabled={hasErrors} ref={acceptButtonRef}>
-            {hotkeyFormat('&Accept')}
-          </Button>
+          <YfCancelButton onClick={handleCancel} />
+          <YfAcceptButton onClick={handleAccept} disabled={hasErrors} ref={acceptButtonRef} />
         </Box>
       </DialogActions>
     </Dialog>
@@ -122,6 +124,7 @@ function PoolNameField() {
       sx={{ marginTop: 1 }}
       fullWidth
       autoFocus
+      spellCheck={false}
       variant="outlined"
       size="small"
       label="Name"
@@ -151,9 +154,8 @@ function NumberOfTeamsField() {
   };
 
   return (
-    <TextField
+    <YfNumericField
       sx={{ verticalAlign: 'baseline', width: '10ch' }}
-      type="number"
       inputProps={{ min: Math.max(1, numTeamsInPool), max: 999 }}
       variant="outlined"
       size="small"
@@ -174,7 +176,6 @@ function NumberOfTeamsField() {
 function RoundRobinsField() {
   const modalManager = useContext(PoolEditModalContext);
   const [numRRs] = useSubscription(modalManager.numRoundRobins || 0);
-  const [minRRs] = useSubscription(modalManager.minRRs);
 
   const allowedOptions = [0, 1, 2, 3, 4];
 
@@ -190,7 +191,7 @@ function RoundRobinsField() {
       }}
     >
       {allowedOptions.map((opt) => (
-        <ToggleButton key={opt} value={opt} disabled={opt < minRRs}>
+        <ToggleButton key={opt} value={opt}>
           {opt === 0 ? 'Not RR' : `${opt}x`}
         </ToggleButton>
       ))}

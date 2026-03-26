@@ -10,10 +10,10 @@ import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
 import { merge } from 'webpack-merge';
 import TerserPlugin from 'terser-webpack-plugin';
-import baseConfig from './webpack.config.base';
-import webpackPaths from './webpack.paths';
-import checkNodeEnv from '../scripts/check-node-env';
-import deleteSourceMaps from '../scripts/delete-source-maps';
+import baseConfig from './webpack.config.base.ts';
+import webpackPaths from './webpack.paths.ts';
+import checkNodeEnv from '../scripts/check-node-env.js';
+import deleteSourceMaps from '../scripts/delete-source-maps.js';
 
 checkNodeEnv('production');
 deleteSourceMaps();
@@ -30,10 +30,8 @@ const configuration: webpack.Configuration = {
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: './',
-    filename: 'renderer.js',
-    library: {
-      type: 'umd',
-    },
+    filename: '[name].js',
+    chunkFilename: '[name].chunk.js',
   },
 
   module: {
@@ -46,7 +44,7 @@ const configuration: webpack.Configuration = {
             loader: 'css-loader',
             options: {
               modules: true,
-              sourceMap: true,
+              sourceMap: false,
               importLoaders: 1,
             },
           },
@@ -85,7 +83,6 @@ const configuration: webpack.Configuration = {
               ref: true,
             },
           },
-          'file-loader',
         ],
       },
     ],
@@ -93,7 +90,17 @@ const configuration: webpack.Configuration = {
 
   optimization: {
     minimize: true,
-    minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
+    minimizer: [new TerserPlugin({ parallel: true }), new CssMinimizerPlugin()],
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
+    },
   },
 
   plugins: [
@@ -112,7 +119,8 @@ const configuration: webpack.Configuration = {
     }),
 
     new MiniCssExtractPlugin({
-      filename: 'style.css',
+      filename: '[name].css',
+      chunkFilename: '[name].chunk.css',
     }),
 
     new BundleAnalyzerPlugin({

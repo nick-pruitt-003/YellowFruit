@@ -1,25 +1,31 @@
 import { createContext } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
-import Tournament, { IQbjTournament, IYftFileTournament, NullTournament } from './DataModel/Tournament';
-import { dateFieldChanged, getFileNameFromPath, textFieldChanged } from './Utils/GeneralUtils';
+import Tournament, { IYftFileTournament, NullTournament } from './DataModel/Tournament';
+import { dateFieldChanged, getFileNameFromPath, textFieldChanged, versionLt } from './Utils/GeneralUtils';
 import { NullObjects } from './Utils/UtilTypes';
 import { IpcBidirectional, IpcMainToRend, IpcRendToMain } from '../IPCChannels';
-import { IQbjWholeFile, IRefTargetDict } from './DataModel/Interfaces';
+import { IIndeterminateQbj, IQbjWholeFile, IRefTargetDict } from './DataModel/Interfaces';
 import AnswerType from './DataModel/AnswerType';
 import StandardSchedule from './DataModel/StandardSchedule';
 import { Team } from './DataModel/Team';
-import Registration from './DataModel/Registration';
+import Registration, { IQbjRegistration } from './DataModel/Registration';
 import { TempTeamManager } from './Modal Managers/TempTeamManager';
 import { GenericModalManager } from './Modal Managers/GenericModalManager';
 import { collectRefTargets, findTournamentObject } from './DataModel/QbjUtils2';
 import FileParser from './DataModel/FileParsing';
 import { TempMatchManager } from './Modal Managers/TempMatchManager';
-import { Match } from './DataModel/Match';
-import { FileSwitchActions, IYftBackupFile, StatReportHtmlPage } from '../SharedUtils';
+import { IModaqMatch, IQbjMatch, Match } from './DataModel/Match';
+import {
+  FileSwitchActions,
+  IMatchImportFileRequest,
+  IYftBackupFile,
+  SqbsExportFile,
+  StatReportHtmlPage,
+} from '../SharedUtils';
 import { StatReportFileNames, StatReportPages } from './Enums';
 import { Pool } from './DataModel/Pool';
 import { PoolStats } from './DataModel/StatSummaries';
-import { Phase, WildCardRankingMethod } from './DataModel/Phase';
+import { Phase, PhaseTypes, WildCardRankingMethod } from './DataModel/Phase';
 import { Round } from './DataModel/Round';
 import TempPhaseManager from './Modal Managers/TempPhaseManager';
 import TempPoolManager from './Modal Managers/TempPoolManager';
@@ -28,6 +34,13 @@ import { snakeCaseToCamelCase, camelCaseToSnakeCase } from './DataModel/CaseConv
 import { CommonRuleSets } from './DataModel/ScoringRules';
 import { qbjFileValidVersion } from './DataModel/QbjUtils';
 import PoolAssignmentModalManager from './Modal Managers/PoolAssignmentModalManager';
+import MatchImportResult from './DataModel/MatchImportResult';
+import MatchImportResultsManager from './Modal Managers/MatchImportResultsManager';
+import { parseOldYfFile, isOldYftFile } from './DataModel/OldYfParsing';
+import parseTeamsFromSqbsFile from './DataModel/SqbsParsing';
+import SqbsExportModalManager from './Modal Managers/SqbsExportModalManager';
+import SqbsGenerator from './DataModel/SqbsFileGeneration';
+import { AlertColor } from '@mui/material';
 
 /** Holds the tournament the application is currently editing */
 export class TournamentManager {
@@ -45,6 +58,9 @@ export class TournamentManager {
 
   /** Hook into the UI to tell it when it needs to update */
   dataChangedReactCallback: () => void;
+
+  /** Show a toast message */
+  makeToast: (message: string, severity?: AlertColor, urlToLaunch?: string) => void;
 
   /** Is there data that hasn't been saved to a file? */
   unsavedData: boolean = false;
@@ -78,6 +94,12 @@ export class TournamentManager {
 
   poolAssignmentModalManager: PoolAssignmentModalManager;
 
+  matchImportResultsManager: MatchImportResultsManager;
+
+  sqbsExportModalManager: SqbsExportModalManager;
+
+  aboutYfDialogOpen: boolean = false;
+
   /** When did we last update the stat report? */
   inAppStatReportGenerated: Date;
 
@@ -85,10 +107,15 @@ export class TournamentManager {
 
   readonly isNull: boolean = false;
 
+  /** The version of the app that is currently running */
   appVersion: string = '';
+
+  /** The latest published version of the app that's available to download*/
+  latestAvailVersion: string = '';
 
   constructor() {
     this.dataChangedReactCallback = () => {};
+    this.makeToast = () => {};
     this.addIpcListeners();
 
     this.genericModalManager = new GenericModalManager();
@@ -98,13 +125,16 @@ export class TournamentManager {
     this.poolModalManager = new TempPoolManager();
     this.rankModalManager = new TempRankManager();
     this.poolAssignmentModalManager = new PoolAssignmentModalManager();
+    this.matchImportResultsManager = new MatchImportResultsManager();
+    this.sqbsExportModalManager = new SqbsExportModalManager();
     this.inAppStatReportGenerated = new Date();
 
-    window.electron.ipcRenderer.sendMessage(IpcBidirectional.GetAppVersion);
+    this.requestAppVersion();
+    this.checkForNewVersion();
 
     this.newTournament();
 
-    window.electron.ipcRenderer.sendMessage(IpcBidirectional.LoadBackup);
+    this.requestBackupFile();
   }
 
   protected addIpcListeners() {
@@ -113,6 +143,9 @@ export class TournamentManager {
     });
     window.electron.ipcRenderer.on(IpcMainToRend.openYftFile, (filePath, fileContents, curYfVersion) => {
       this.openYftFile(filePath as string, fileContents as string, curYfVersion as string);
+    });
+    window.electron.ipcRenderer.on(IpcMainToRend.ImportQbjTournament, (filePath, fileContents) => {
+      this.importQbjTournament(filePath as string, fileContents as string);
     });
     window.electron.ipcRenderer.on(IpcMainToRend.saveCurrentTournament, () => {
       this.saveYftFile();
@@ -135,16 +168,53 @@ export class TournamentManager {
     window.electron.ipcRenderer.on(IpcMainToRend.GenerateBackup, () => {
       this.saveBackup();
     });
+    window.electron.ipcRenderer.on(IpcMainToRend.ImportQbjTeams, (contents) => {
+      this.importQbjTeams(contents as string);
+    });
+    window.electron.ipcRenderer.on(IpcMainToRend.ImportSqbsTeams, (contents) => {
+      this.importSqbsTeams(contents as string);
+    });
+    window.electron.ipcRenderer.on(IpcMainToRend.ImportQbjGamesMainLaunch, (fileAry) => {
+      this.importMatchesFromQbj(fileAry as IMatchImportFileRequest[]);
+    });
+    window.electron.ipcRenderer.on(IpcMainToRend.MakeToast, (message) => {
+      this.makeToast(message as string);
+    });
     window.electron.ipcRenderer.on(IpcBidirectional.LoadBackup, (contents) => {
       this.parseBackup(contents as string);
     });
     window.electron.ipcRenderer.on(IpcBidirectional.ExportQbjFile, (filePath) => {
       this.exportQbjFile(filePath as string);
     });
+    window.electron.ipcRenderer.on(IpcBidirectional.SqbsExport, () => {
+      this.startSqbsExport();
+    });
+    window.electron.ipcRenderer.on(IpcMainToRend.LaunchAboutYf, () => {
+      this.openAboutYfDialog();
+    });
     window.electron.ipcRenderer.on(IpcBidirectional.GetAppVersion, (version) => {
       this.appVersion = version as string;
       if (this.tournament) this.tournament.appVersion = this.appVersion;
     });
+    window.electron.ipcRenderer.on(IpcBidirectional.CheckForNewVersion, (latestVersion) => {
+      this.latestAvailVersion = latestVersion as string;
+      this.newReleaseAlert();
+    });
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  protected requestAppVersion() {
+    window.electron.ipcRenderer.sendMessage(IpcBidirectional.GetAppVersion);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  protected requestBackupFile() {
+    window.electron.ipcRenderer.sendMessage(IpcBidirectional.LoadBackup);
+  }
+
+  //eslint-disable-next-line class-methods-use-this
+  protected checkForNewVersion() {
+    window.electron.ipcRenderer.sendMessage(IpcBidirectional.CheckForNewVersion);
   }
 
   private checkForUnsavedData(action: FileSwitchActions) {
@@ -166,7 +236,7 @@ export class TournamentManager {
     this.tournament = new Tournament();
     this.tournament.appVersion = this.appVersion;
     this.modalManagersSetTournament();
-    this.filePath = null;
+    this.setFilePath(null);
     this.displayName = '';
     this.unsavedData = false;
 
@@ -176,12 +246,58 @@ export class TournamentManager {
 
   /** Parse file contents and load tournament for editing */
   private openYftFile(filePath: string, fileContents: string, curYfVersion: string) {
+    if (isOldYftFile(fileContents)) {
+      this.openOldYftFile(fileContents);
+      return;
+    }
+
     const objFromFile = this.parseJSON(fileContents);
     if (!objFromFile) return;
-    this.parseObjectFromFile(filePath, objFromFile, curYfVersion);
+    this.parseYftFile(filePath, objFromFile, curYfVersion);
   }
 
-  private parseObjectFromFile(filePath: string, objFromFile: object, curYfVersion?: string) {
+  private openOldYftFile(fileContents: string) {
+    try {
+      this.tournament = parseOldYfFile(fileContents);
+    } catch (err: any) {
+      this.openGenericModal('Invalid File', err.message);
+      this.newTournament();
+      return;
+    }
+
+    this.tournament.appVersion = this.appVersion;
+    this.modalManagersSetTournament();
+    this.setFilePath(null); // don't actually edit old files directly, in case we can't parse them right and end up losing info
+    this.displayName = '';
+    this.unsavedData = true;
+
+    this.setWindowTitle();
+    this.dataChangedReactCallback();
+
+    this.genericModalManager.open(
+      'YellowFruit',
+      'This file is from an older version of YellowFruit. It has been opened successfully, but you will need to save a new file if you make changes.',
+    );
+  }
+
+  /** Import an entire (non-YFT) qbj file */
+  private importQbjTournament(filePath: string, fileContents: string) {
+    this.newTournament();
+    const objFromFile = this.parseJSON(fileContents);
+    if (!objFromFile) return;
+
+    snakeCaseToCamelCase(objFromFile);
+    const loadedTournament = this.loadTournamentFromQbjObjects(objFromFile as IQbjWholeFile);
+    if (loadedTournament === null) {
+      return;
+    }
+    this.tournament = loadedTournament;
+    this.modalManagersSetTournament();
+    this.displayName = this.tournament.name || '';
+    this.onDataChanged();
+  }
+
+  private parseYftFile(filePath: string, objFromFile: object, curYfVersion?: string) {
     snakeCaseToCamelCase(objFromFile);
     const loadedTournament = this.loadTournamentFromQbjObjects(objFromFile as IQbjWholeFile, curYfVersion);
     if (loadedTournament === null) {
@@ -191,7 +307,7 @@ export class TournamentManager {
     loadedTournament.conversions();
     loadedTournament.appVersion = this.appVersion;
 
-    this.filePath = filePath as string;
+    this.setFilePath(filePath as string);
     this.tournament = loadedTournament;
     this.modalManagersSetTournament();
     this.displayName = this.tournament.name || '';
@@ -213,7 +329,11 @@ export class TournamentManager {
     return objFromFile;
   }
 
-  /** Given an array of Qbj/Yft objects, parse them and create a tournament from the info */
+  /**
+   * Given an array of Qbj/Yft objects, parse them and create a tournament from the info
+   * @param objFromFile The parsed JSON object from the file
+   * @param curYfVersion YellowFruit version the yft file must be compatible with. If not passed, we treat as a non-YFT base qbj file
+   */
   loadTournamentFromQbjObjects(objFromFile: IQbjWholeFile, curYfVersion?: string): Tournament | null {
     if (!qbjFileValidVersion(objFromFile)) {
       this.openGenericModal('Invalid File', "This file doesn't use a supported version of the tournament schema.");
@@ -240,7 +360,11 @@ export class TournamentManager {
     const parser = new FileParser(refTargets);
     let loadedTournament: Tournament | null = null;
     try {
-      loadedTournament = parser.parseYftTournament(tournamentObj as IYftFileTournament, curYfVersion);
+      if (curYfVersion) {
+        loadedTournament = parser.parseYftTournament(tournamentObj as IYftFileTournament, curYfVersion);
+      } else {
+        loadedTournament = parser.parseTournament(tournamentObj);
+      }
     } catch (err: any) {
       this.openGenericModal('Invalid File', err.message);
     }
@@ -255,14 +379,283 @@ export class TournamentManager {
     );
   }
 
-  private static getTournamentFromQbjFile(fileObj: IQbjWholeFile): IQbjTournament | null {
-    if (!fileObj.objects) return null;
-    return findTournamentObject(fileObj.objects);
+  // eslint-disable-next-line class-methods-use-this
+  launchImportQbjTeamsWorkflow() {
+    window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchImportQbjTeamWorkflow);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  launchImportSqbsTeamsWorkflow() {
+    window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchImportSqbsTeamWorkflow);
+  }
+
+  private importQbjTeams(fileContents: string) {
+    const objFromFile = this.parseJSON(fileContents) as IQbjWholeFile;
+    if (!objFromFile) return;
+
+    const objectList = objFromFile.objects;
+    if (!qbjFileValidVersion(objFromFile)) {
+      this.openGenericModal('Invalid File', "This file doesn't use a supported version of the tournament schema.");
+      return;
+    }
+
+    let refTargets: IRefTargetDict = {};
+    try {
+      refTargets = collectRefTargets(objectList);
+    } catch (err: any) {
+      this.openGenericModal('Invalid File', err.message);
+      return;
+    }
+
+    const registrationList = FileParser.findRegistrations(objectList);
+    if (registrationList.length === 0) {
+      this.openGenericModal('Invalid File', 'This file contains no Registration objects.');
+      return;
+    }
+
+    const parser = new FileParser(refTargets, this.tournament);
+    parser.buildTypesByIdArrays(objectList);
+    let numTeamsImported = 0;
+    const maxTeamsAllowed = this.tournament.getExpectedNumberOfTeams();
+    let maxTeamsReached = false;
+    for (const reg of registrationList) {
+      if (this.tournament.getNumberOfTeams() === maxTeamsAllowed) {
+        maxTeamsReached = true;
+        break;
+      }
+      numTeamsImported += this.importSingleRegistrationObj(reg, parser);
+    }
+
+    if (numTeamsImported === 0) {
+      this.openGenericModal(
+        'Team Import',
+        `No teams were imported because no new teams were found or the maximum number of teams was reached.`,
+      );
+    } else {
+      this.openGenericModal(
+        'Team Import',
+        `Imported ${numTeamsImported} teams.${
+          maxTeamsReached ? ' Not all teams were imported because the maximum number teams was reached.' : ''
+        }`,
+      );
+    }
+    this.markFileDirty();
+  }
+
+  private importSingleRegistrationObj(registration: IQbjRegistration, parser: FileParser) {
+    let registrationFromFile;
+    try {
+      registrationFromFile = parser.parseRegistration(registration as IIndeterminateQbj);
+    } catch (err: any) {
+      // TODO: track errors?
+      return 0;
+    }
+    if (!registrationFromFile) return 0;
+
+    registrationFromFile.computeLettersAndRegName();
+    let numTeamsImported = 0;
+    const maxTeamsAllowed = this.tournament.getExpectedNumberOfTeams();
+    const existingRegistration = this.tournament.findRegistration(registrationFromFile.name);
+    if (existingRegistration) {
+      for (const teamFromFile of registrationFromFile.teams) {
+        if (!this.tournament.findTeamByName(teamFromFile.name)) {
+          existingRegistration.addTeam(teamFromFile);
+          numTeamsImported++;
+        }
+        if (this.tournament.getNumberOfTeams() === maxTeamsAllowed) break;
+      }
+      this.tournament.seedTeamsInRegistration(existingRegistration);
+    } else {
+      if (
+        maxTeamsAllowed !== null &&
+        this.tournament.getNumberOfTeams() + registrationFromFile.teams.length > maxTeamsAllowed
+      ) {
+        return 0;
+      }
+      this.tournament.addRegistration(registrationFromFile);
+      numTeamsImported = registrationFromFile.teams.length;
+    }
+    return numTeamsImported;
+  }
+
+  private importSqbsTeams(fileContents: string) {
+    let registrationList;
+    try {
+      registrationList = parseTeamsFromSqbsFile(fileContents);
+    } catch (err: any) {
+      this.openGenericModal('SQBS Roster Import', `Import failed: ${err.message}`);
+      return;
+    }
+    if (!registrationList) return;
+
+    if (registrationList.length === 0) {
+      this.openGenericModal('SQBS Roster Import', 'No teams imported: this file contains no teams');
+      return;
+    }
+
+    const maxTeamsAllowed = this.tournament.getExpectedNumberOfTeams();
+    let numTeamsImported = 0;
+    for (const oneReg of registrationList) {
+      if (maxTeamsAllowed !== null && this.tournament.getNumberOfTeams() >= maxTeamsAllowed) {
+        this.openGenericModal(
+          'SQBS Roster Import',
+          `Imported ${numTeamsImported} teams. Not all teams in the file were imported because the maximum number of teams was reached.`,
+        );
+        this.markFileDirty();
+        return;
+      }
+
+      const existingReg = this.tournament.findRegistration(oneReg.name);
+      if (!existingReg) {
+        this.tournament.addRegistration(oneReg);
+        numTeamsImported++;
+      } else {
+        const newTeam = oneReg.teams[0];
+        if (!existingReg.teams.find((t) => t.name === newTeam.name)) {
+          existingReg.addTeam(newTeam);
+          this.tournament.seedAndAssignNewTeam(newTeam);
+          numTeamsImported++;
+        }
+      }
+    }
+    this.openGenericModal('SQBS Roster Import', `Imported ${numTeamsImported} teams.`);
+    this.markFileDirty();
+  }
+
+  /**
+   * Tell main to launch the file selection window for importing matches
+   * @param round Which round the matches should go into. If not passed, use the files to determine the correct rounds
+   * @returns
+   */
+  async launchImportMatchWorkflow(round?: Round) {
+    const files = (await window.electron.ipcRenderer.invoke(
+      IpcBidirectional.ImportQbjGamesRendererLaunch,
+    )) as IMatchImportFileRequest[];
+
+    this.importMatchesFromQbj(files, round);
+  }
+
+  /**
+   * Parse a qbj or qbj-like file and add its matches to the given round
+   * @param fileAry The files we're trying to parse
+   * @param round Which round the matches should go into. If not passed, use the files to determine the correct rounds.
+   */
+  private importMatchesFromQbj(fileAry: IMatchImportFileRequest[], round?: Round) {
+    if (fileAry.length === 0) return;
+
+    const phase = round ? this.tournament.findPhaseByRound(round) : undefined;
+
+    let results: MatchImportResult[] = [];
+    for (const oneFile of fileAry) {
+      const { filePath, fileContents } = oneFile;
+      const objFromFile = this.parseJSON(fileContents);
+      if (!objFromFile) return;
+
+      snakeCaseToCamelCase(objFromFile);
+
+      if ((objFromFile as IQbjWholeFile).objects) {
+        results = results.concat(this.importMatchesFromWholeQbj(objFromFile as IQbjWholeFile, filePath, phase, round));
+      } else {
+        const oneResult: MatchImportResult = new MatchImportResult(filePath);
+        results.push(oneResult);
+        const roundToUse = round ?? this.tournament.getRoundObjByNumber((objFromFile as IModaqMatch)._round);
+        if (!roundToUse) {
+          oneResult.markFatal("Couldn't determine a round for the game in this file");
+          continue;
+        }
+        const phaseToUse = phase ?? this.tournament.findPhaseByRound(roundToUse);
+        if (!phaseToUse) {
+          continue; // just ignore this match; this isn't plausible and I don't know how I would explain it to a user
+        }
+        this.importSingleMatchObj(objFromFile as IQbjMatch, phaseToUse, roundToUse, oneResult);
+      }
+    }
+
+    MatchImportResult.validateImportSetForTeamDups(results);
+    this.tournament.setMatchIdCounter();
+    this.openMatchImportModal(results, round);
+  }
+
+  /**
+   * Import multiple matches from an arbitrary QBJ file
+   * @param fileObj top-level file JSON object
+   * @param phase phase we're importing matches into
+   * @param round round we're importing matches into
+   * @param filePath file that we're importing
+   */
+  private importMatchesFromWholeQbj(fileObj: IQbjWholeFile, filePath: string, phase?: Phase, round?: Round) {
+    const objectList = fileObj.objects;
+    const importResults: MatchImportResult[] = [];
+    const wholeFileFailureResult = new MatchImportResult(filePath);
+    if (!qbjFileValidVersion(fileObj as IQbjWholeFile)) {
+      wholeFileFailureResult.markFatal("This file doesn't use a supported version of the tournament schema.");
+      importResults.push(wholeFileFailureResult);
+      return importResults;
+    }
+
+    let refTargets: IRefTargetDict = {};
+    try {
+      refTargets = collectRefTargets(objectList);
+    } catch (err: any) {
+      wholeFileFailureResult.markFatal(err.message);
+      importResults.push(wholeFileFailureResult);
+      return importResults;
+    }
+
+    const matchesWithRoundNums = FileParser.findMatches(objectList);
+    if (matchesWithRoundNums.length === 0) {
+      wholeFileFailureResult.markFatal(`The file ${filePath} contains no Match objects.`);
+      importResults.push(wholeFileFailureResult);
+      return importResults;
+    }
+
+    const parser = new FileParser(refTargets, this.tournament, phase);
+    parser.buildTypesByIdArrays(objectList);
+    for (const matchAndRound of matchesWithRoundNums) {
+      const singleResult = new MatchImportResult(filePath);
+      const roundToUse = round ?? this.tournament.getRoundObjByNumber(Number.parseInt(matchAndRound.roundName, 10));
+      if (roundToUse === undefined) {
+        singleResult.markFatal(`Couldn't find a round in this tournament matching "${matchAndRound.roundName}"`);
+        continue;
+      }
+      const phaseToUse = phase ?? this.tournament.findPhaseByRound(roundToUse);
+      if (phaseToUse === undefined) {
+        continue; // just ignore this match; this isn't plausible and I don't know how I would explain it to a user
+      }
+      this.importSingleMatchObj(matchAndRound.match, phaseToUse, roundToUse, singleResult, parser);
+      importResults.push(singleResult);
+    }
+    return importResults;
+  }
+
+  /** Import a match based only on a single QBJ Match object and nothing else */
+  private importSingleMatchObj(
+    match: IQbjMatch,
+    phase: Phase,
+    round: Round,
+    importResult: MatchImportResult,
+    existingParser?: FileParser,
+  ) {
+    importResult.phase = phase;
+    importResult.round = round;
+    const parser = existingParser ?? new FileParser({}, this.tournament);
+    parser.importPhase = phase;
+    let yfMatch;
+    try {
+      yfMatch = parser.parseMatch(match as IIndeterminateQbj);
+    } catch (err: any) {
+      importResult.markFatal(err.message);
+      return;
+    }
+    if (yfMatch) {
+      Tournament.validateHaveTeamsPlayedInRound(yfMatch, round, phase, false);
+      importResult.evaluateMatch(yfMatch);
+    }
   }
 
   /** Save the tournament to the given file and switch context to that file */
   yftSaveAs(filePath: string) {
-    this.filePath = filePath;
+    this.setFilePath(filePath);
     this.saveYftFile();
   }
 
@@ -277,6 +670,41 @@ export class TournamentManager {
     const fileObj = this.generateWholeFileObj(true);
     const fileContents = TournamentManager.makeJSON(fileObj);
     window.electron.ipcRenderer.sendMessage(IpcBidirectional.ExportQbjFile, filePath, fileContents);
+  }
+
+  private startSqbsExport() {
+    if (this.tournament.phases.length > 1) {
+      this.openSqbsExportModal();
+    } else {
+      this.generateSqbsFiles(this.tournament.phases);
+    }
+  }
+
+  private generateSqbsFiles(phases: Phase[], combinedFile?: boolean) {
+    if (phases.length === 0) {
+      this.openGenericModal('Error', 'Failed to find any stages to export');
+      return;
+    }
+    const sqbsGenerator = new SqbsGenerator(this.tournament);
+    const sqbsFiles: SqbsExportFile[] = [];
+    if (phases.length === 1 || combinedFile) {
+      sqbsGenerator.generateFile(phases);
+      if (sqbsGenerator.errorMessage !== '') {
+        this.openGenericModal('SQBS Export', `Error: ${sqbsGenerator.errorMessage}`);
+        return;
+      }
+      sqbsFiles.push({ contents: sqbsGenerator.fileOutput });
+    } else {
+      for (const ph of phases) {
+        sqbsGenerator.generateFile([ph]);
+        if (sqbsGenerator.errorMessage !== '') {
+          this.openGenericModal('SQBS Export', `Error: ${sqbsGenerator.errorMessage}`);
+          return;
+        }
+        sqbsFiles.push({ contents: sqbsGenerator.fileOutput, fileSuffix: ph.name });
+      }
+    }
+    window.electron.ipcRenderer.sendMessage(IpcBidirectional.SqbsExport, sqbsFiles);
   }
 
   private saveBackup() {
@@ -307,7 +735,7 @@ export class TournamentManager {
 
   useRecoveredBackup() {
     if (!this.recoveredBackup) return;
-    this.parseObjectFromFile(this.recoveredBackup.filePath, this.recoveredBackup.fileContents);
+    this.parseYftFile(this.recoveredBackup.filePath, this.recoveredBackup.fileContents);
     if (this.recoveredBackup.filePath !== '') this.saveYftFile();
     this.discardRecoveredBackup();
   }
@@ -339,11 +767,12 @@ export class TournamentManager {
     if (filePath) this.setFilePath(filePath);
     this.unsavedData = false;
     this.setWindowTitle();
-    // this.makeToast('Data saved');
+    this.makeToast('File saved');
   }
 
-  private setFilePath(path: string) {
-    this.filePath = path ?? null;
+  private setFilePath(path: string | null) {
+    this.filePath = path || null;
+    window.electron.ipcRenderer.sendMessage(IpcRendToMain.setYftFilePath, path || '');
   }
 
   compileStats() {
@@ -392,8 +821,6 @@ export class TournamentManager {
     this.teamModalManager.tournament = this.tournament;
     this.matchModalManager.tournament = this.tournament;
   }
-
-  // #region Functions for changing the data from the UI
 
   /** Keep track of which view the user is on, so that they can leave the Teams page, then
    *  come back and see the samve view.
@@ -456,6 +883,15 @@ export class TournamentManager {
       return;
     }
     this.tournament.questionSet = trimmedName;
+    this.onDataChanged();
+  }
+
+  setPacketName(round: Round, packetName: string) {
+    const trimmedName = packetName.trim();
+    if (!textFieldChanged(round.packet.name, trimmedName)) {
+      return;
+    }
+    round.packet.name = trimmedName;
     this.onDataChanged();
   }
 
@@ -583,6 +1019,12 @@ export class TournamentManager {
     this.onDataChanged();
   }
 
+  setLightningDivisor(val: number) {
+    this.tournament.scoringRules.lightningDivisor = val;
+    this.tournament.clearStdRuleSet();
+    this.onDataChanged();
+  }
+
   setStandardSchedule(sched: StandardSchedule) {
     this.tournament.setStandardSchedule(sched);
     this.onDataChanged();
@@ -610,6 +1052,11 @@ export class TournamentManager {
     this.onDataChanged();
   }
 
+  startNewCustomSchedule() {
+    this.tournament.startNewCustomSchedule();
+    this.onDataChanged();
+  }
+
   setPhaseWCRankMethod(phase: Phase, method: WildCardRankingMethod) {
     phase.wildCardRankingMethod = method;
     this.onDataChanged();
@@ -622,6 +1069,16 @@ export class TournamentManager {
 
   addPlayoffPhase() {
     this.tournament.addBlankPhase();
+    this.onDataChanged();
+  }
+
+  movePhaseUp(phase: Phase) {
+    this.tournament.movePhaseUp(phase);
+    this.onDataChanged();
+  }
+
+  movePhaseDown(phase: Phase) {
+    this.tournament.movePhaseDown(phase);
     this.onDataChanged();
   }
 
@@ -714,11 +1171,24 @@ export class TournamentManager {
     this.onDataChanged();
   }
 
-  unseededTeamDragDrop(originPool: Pool, targetPool: Pool, teamBeingDropped: Team) {
+  /**
+   * Move a team between lists on the seeing page
+   * @param originPool Pool the team was in, or null if they weren't in any pool
+   * @param targetPool Pool the team is being moved to
+   * @param teamBeingDropped Team being moved
+   */
+  unseededTeamDragDrop(originPool: Pool | null, targetPool: Pool, teamBeingDropped: Team) {
     if (originPool === targetPool) return;
 
-    originPool.removeTeam(teamBeingDropped);
+    if (originPool) originPool.removeTeam(teamBeingDropped);
     targetPool.addTeam(teamBeingDropped);
+
+    const phase = this.tournament.getPrelimPhase();
+    if (phase) {
+      if (originPool) phase.revalidateMatchesForPoolCompatibility(originPool);
+      phase.revalidateMatchesForPoolCompatibility(targetPool);
+    }
+
     this.onDataChanged();
   }
 
@@ -796,10 +1266,6 @@ export class TournamentManager {
     this.onDataChanged();
   }
 
-  // #endregion
-
-  // #region Functions for handling temporary data used by dialogs
-
   /** Open with a new blank team */
   openTeamEditModalNewTeam() {
     this.teamModalManager.openModal();
@@ -843,16 +1309,22 @@ export class TournamentManager {
     );
     const registrationSwitched = this.registrationBeingModified !== actualRegToModify;
 
-    if (this.registrationBeingModified !== null && registrationSwitched) {
-      this.registrationBeingModified.deleteTeam(this.teamBeingModified);
-    }
-
     if (actualRegToModify === null) {
+      // brand new registration
       this.tournament.addRegAndTeam(this.teamModalManager.tempRegistration, this.teamModalManager.tempTeam);
-    } else if (this.teamBeingModified === null || registrationSwitched) {
+    } else if (this.teamBeingModified === null) {
+      // brand new team on existing registration
       this.teamModalManager.saveRegistration(actualRegToModify, true);
       this.tournament.seedTeamsInRegistration(actualRegToModify);
+    } else if (registrationSwitched) {
+      // existing team being moved from one registration to another
+      this.teamModalManager.saveRegistration(actualRegToModify, true, this.teamBeingModified);
+      if (this.registrationBeingModified !== null) {
+        // remove the team from the old registration
+        this.tournament.deleteTeam(this.registrationBeingModified, this.teamBeingModified);
+      }
     } else {
+      // existing team being modified without changing the registration
       this.teamModalManager.saveTeam(actualRegToModify, this.teamBeingModified);
     }
     this.teamEditModalReset(stayOpen, startNextLetter);
@@ -920,18 +1392,46 @@ export class TournamentManager {
     }
   }
 
+  openMatchImportModal(importResults: MatchImportResult[], round?: Round) {
+    this.matchImportResultsManager.openModal(importResults, round);
+  }
+
+  closeMatchImportModal(shouldSave: boolean) {
+    this.matchImportResultsManager.closeModal(shouldSave);
+    this.onDataChanged(!shouldSave);
+  }
+
   openPhaseModal(phase: Phase) {
     const otherNames = this.tournament.phases.filter((ph) => ph !== phase).map((ph) => ph.name);
+    const relatedFullPhase = phase.isFullPhase() ? phase : this.tournament.getPrevFullPhase(phase);
+    const canConvToFinals = !relatedFullPhase
+      ? false
+      : (phase.phaseType === PhaseTypes.Playoff || phase.phaseType === PhaseTypes.Tiebreaker) &&
+        this.tournament.isLastFullPhase(relatedFullPhase) &&
+        !this.tournament.hasTiebreakerAfter(phase);
+    // Has to either be a playoff phase, or a finals phase immediately after a playoff phase
+    const canConvToTB = !relatedFullPhase
+      ? false
+      : (phase.phaseType === PhaseTypes.Playoff ||
+          (phase.phaseType === PhaseTypes.Finals && relatedFullPhase === this.tournament.getPrevPhase(phase))) &&
+        !this.tournament.hasTiebreakerAfter(relatedFullPhase);
+
     this.phaseModalManager.openModal(
       phase,
       otherNames,
+      canConvToFinals,
+      canConvToTB,
       this.tournament.roundNumberLowerBound(phase),
       this.tournament.roundNumberUpperBound(phase),
     );
   }
 
   closePhaseModal(shouldSave: boolean) {
+    const needToRecomputePhaseCodes = shouldSave && this.phaseModalManager.needToRecomputePhaseCodes();
     this.phaseModalManager.closeModal(shouldSave);
+    if (needToRecomputePhaseCodes) {
+      this.tournament.recomputePhaseCodes();
+    }
     this.onDataChanged(!shouldSave);
   }
 
@@ -955,10 +1455,8 @@ export class TournamentManager {
     this.onDataChanged(!shouldSave);
   }
 
-  openPoolAssignmentModal(team: Team, originalPool: Pool) {
-    const prelimPhase = this.tournament.getPrelimPhase();
-    if (!prelimPhase) return;
-    this.poolAssignmentModalManager.openModal(team, originalPool, prelimPhase);
+  openPoolAssignmentModal(team: Team, phase: Phase, acceptCallback: () => void, originalPool?: Pool) {
+    this.poolAssignmentModalManager.openModal(team, phase, acceptCallback, originalPool);
     this.onDataChanged(true);
   }
 
@@ -967,13 +1465,44 @@ export class TournamentManager {
     this.onDataChanged(!shouldSave);
   }
 
-  // #endregion
+  poolAssignSimpleSwitch() {
+    this.poolAssignmentModalManager.simplePoolSwitch();
+  }
+
+  poolAssignPlayoffSwitch() {
+    if (!this.poolAssignmentModalManager.modalIsOpen) return;
+
+    const team = this.poolAssignmentModalManager.teamBeingAssigned;
+    const nextPhase = this.poolAssignmentModalManager.phase;
+    if (!team || !nextPhase) return;
+
+    const newPool = this.poolAssignmentModalManager.selectedPool;
+    this.overridePlayoffPoolAssignment(team, nextPhase, newPool);
+  }
+
+  openSqbsExportModal() {
+    this.sqbsExportModalManager.openModal(this.tournament.phases);
+    this.onDataChanged(true);
+  }
+
+  closeSqbsExportModal(shouldSave: boolean) {
+    const phases = this.sqbsExportModalManager.selectedPhases;
+    const combinedFile = this.sqbsExportModalManager.combineFiles;
+    this.sqbsExportModalManager.closeModal();
+    this.onDataChanged(true);
+
+    if (shouldSave) this.generateSqbsFiles(phases, combinedFile);
+  }
 
   /** Should be called anytime the user modifies something */
   private onDataChanged(doesntAffectFile = false) {
     this.dataChangedReactCallback();
     if (doesntAffectFile) return;
 
+    this.markFileDirty();
+  }
+
+  private markFileDirty() {
     this.unsavedData = true;
     this.setWindowTitle();
   }
@@ -992,6 +1521,16 @@ export class TournamentManager {
     return `${this.displayName} - ${fileName}`;
   }
 
+  openAboutYfDialog() {
+    this.aboutYfDialogOpen = true;
+    this.onDataChanged(true);
+  }
+
+  closeAboutYfDialog() {
+    this.aboutYfDialogOpen = false;
+    this.onDataChanged(true);
+  }
+
   openGenericModal(title: string, contents: string) {
     this.genericModalManager.open(title, contents);
     this.dataChangedReactCallback();
@@ -999,6 +1538,52 @@ export class TournamentManager {
 
   closeGenericModal() {
     this.genericModalManager.close();
+  }
+
+  anyModalOpen() {
+    return (
+      this.genericModalManager.isOpen ||
+      this.teamModalManager.modalIsOpen ||
+      this.matchModalManager.modalIsOpen ||
+      this.phaseModalManager.modalIsOpen ||
+      this.poolModalManager.modalIsOpen ||
+      this.rankModalManager.modalIsOpen ||
+      this.matchImportResultsManager.modalIsOpen ||
+      this.poolAssignmentModalManager.modalIsOpen ||
+      this.sqbsExportModalManager.modalIsOpen ||
+      this.aboutYfDialogOpen
+    );
+  }
+
+  /** Alert the user if there is a newer version of the application is available */
+  newReleaseAlert(isRetry?: boolean) {
+    if (this.latestAvailVersion === '') return;
+
+    if (this.appVersion === '') {
+      if (isRetry) this.requestAppVersion();
+
+      setTimeout(() => {
+        this.newReleaseAlert(true);
+      }, 3000);
+    }
+
+    if (versionLt(this.appVersion, this.latestAvailVersion)) {
+      this.makeToast(
+        `A newer version of YellowFruit is available`,
+        'info',
+        'https://github.com/ANadig/YellowFruit/releases/latest',
+      );
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  launchStatReportInBrowserWindow() {
+    window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchStatReportInBrowser);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  launchWebPageInBrowserWindow(url: string) {
+    window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchExternalWebPage, url);
   }
 }
 
@@ -1016,6 +1601,15 @@ class NullTournamentManager extends TournamentManager {
 
   // eslint-disable-next-line class-methods-use-this
   protected setWindowTitle(): void {}
+
+  // eslint-disable-next-line class-methods-use-this
+  requestAppVersion(): void {}
+
+  // eslint-disable-next-line class-methods-use-this
+  requestBackupFile(): void {}
+
+  // eslint-disable-next-line class-methods-use-this
+  checkForNewVersion(): void {}
 }
 
 /** React context that elements can use to access the TournamentManager and its data without

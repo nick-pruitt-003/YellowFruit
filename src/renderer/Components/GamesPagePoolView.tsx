@@ -1,6 +1,6 @@
 import { IconButton, Stack, Table, TableBody, TableCell, TableContainer, TableRow, Tooltip } from '@mui/material';
 import { useContext, useMemo } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import { Add, Edit, JoinRight } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
 import YfCard from './YfCard';
@@ -95,13 +95,13 @@ function PoolMatrix(props: IPoolMatrixProps) {
               <TableCell sx={{ fontWeight: 'bold' }}>{getMatrixTitle(pool, nthRoundRobin)}</TableCell>
               {pool.poolTeams.map((pt) => (
                 <TableCell key={`header-${pt.team.name}`} align="center">
-                  {pt.team.name}
+                  {pt.team.getTruncatedName()}
                 </TableCell>
               ))}
             </TableRow>
             {pool.poolTeams.map((pt) => (
               <TableRow key={`row-${pt.team.name}`}>
-                <TableCell>{pt.team.name}</TableCell>
+                <TableCell>{pt.team.getTruncatedName()}</TableCell>
                 {pool.poolTeams.map((opponent) => (
                   <MatrixCell
                     key={`versus-${opponent.team.name}`}
@@ -161,10 +161,14 @@ function MatrixCell(props: IMatrixCellProps) {
     if (!round) return;
     tournManager.openMatchEditModalExistingMatch(match, round);
   };
+  const resultDisp = match.getShortScore(team);
+  let backgroundColor = '';
+  if (resultDisp.startsWith('W')) backgroundColor = '#4caf5020';
+  else if (resultDisp.startsWith('L')) backgroundColor = '#f4433620';
 
   return (
-    <TableCell align="center">
-      {match.getShortScore(team)}
+    <TableCell align="center" sx={{ backgroundColor }}>
+      {resultDisp}
       <IconButton size="small" onClick={editExisting}>
         <Edit />
       </IconButton>

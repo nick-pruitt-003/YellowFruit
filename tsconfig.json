@@ -3,16 +3,18 @@
     "incremental": true,
     "target": "es2022",
     "module": "commonjs",
+    "moduleResolution": "node", // TODO: change to "bundler" when upgrading to TypeScript 6
+    "types": ["node", "vitest/globals"], // TS6 default is [] (no auto-discovery); explicit now so upgrade is a no-op
+    "rootDir": ".", // TS6 requires explicit rootDir; set now to prevent TS5011 on upgrade
     "lib": ["dom", "es2022"],
     "jsx": "react-jsx",
     "strict": true,
     "sourceMap": true,
-    "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "outDir": ".erb/dll"
   },
-  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
+  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll", ".erb/configs"]
 }

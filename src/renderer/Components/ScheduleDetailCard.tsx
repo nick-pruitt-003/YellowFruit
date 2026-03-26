@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import {
   Accordion,
   AccordionDetails,
@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Add, Delete, Edit, ExpandMore, LockOpen } from '@mui/icons-material';
+import { Add, ArrowDownward, ArrowUpward, Delete, Edit, ExpandMore, LockOpen, Tune } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
 import YfCard from './YfCard';
 import useSubscription from '../Utils/CustomHooks';
@@ -30,6 +30,7 @@ import { Phase, PhaseTypes, WildCardRankingMethod } from '../DataModel/Phase';
 import { Pool, advOpportunityDisplay } from '../DataModel/Pool';
 import { LinkButton } from '../Utils/GeneralReactUtils';
 
+const cardTitle = 'Schedule Detail';
 const unlockCustSchedTooltip =
   'Add, remove, or modify stages and pools. Seeding and rebracketing assistance is not available for custom schedules.';
 const usingCustSchedTooltip = 'Using a custom schedule. Seeding and rebracketing assistance are not available.';
@@ -40,11 +41,19 @@ export default function ScheduleDetailCard() {
   const [phases] = useSubscription(thisTournament.phases);
   const [usingTemplate] = useSubscription(thisTournament.usingScheduleTemplate);
 
+  if (thisTournament.phases.length === 0) {
+    return (
+      <YfCard title={cardTitle}>
+        <ScheduleZeroState />
+      </YfCard>
+    );
+  }
+
   const tooltip = usingTemplate ? unlockCustSchedTooltip : usingCustSchedTooltip;
 
   return (
     <YfCard
-      title="Schedule Detail"
+      title={cardTitle}
       secondaryHeader={
         <Tooltip title={tooltip}>
           <span>
@@ -62,7 +71,7 @@ export default function ScheduleDetailCard() {
     >
       <List>
         {phases.map((phase) => (
-          <Accordion key={phase.code} defaultExpanded>
+          <Accordion key={`${phase.code}${phase.name}`} defaultExpanded>
             <PhaseAccordionHeader phase={phase} />
             <AccordionDetails>
               {phase.isFullPhase() ? <PhaseEditor phase={phase} /> : <MinorPhaseSection phase={phase} />}
@@ -71,14 +80,16 @@ export default function ScheduleDetailCard() {
         ))}
       </List>
       {!usingTemplate && (
-        <Button
-          sx={{ marginTop: 1 }}
-          variant="contained"
-          onClick={() => tournManager.addPlayoffPhase()}
-          startIcon={<Add />}
-        >
-          Add Stage
-        </Button>
+        <Tooltip title="Add a stage of pool-based play">
+          <Button
+            sx={{ marginTop: 1 }}
+            variant="contained"
+            onClick={() => tournManager.addPlayoffPhase()}
+            startIcon={<Add />}
+          >
+            Add Playoff Stage
+          </Button>
+        </Tooltip>
       )}
     </YfCard>
   );
@@ -91,10 +102,13 @@ interface PhaseAccordionHeaderProps {
 function PhaseAccordionHeader(props: PhaseAccordionHeaderProps) {
   const { phase } = props;
   const tournManager = useContext(TournamentContext);
+  const thisTourn = tournManager.tournament;
   const matchesExist = phase.anyMatchesExist();
-  const [usingTemplate] = useSubscription(tournManager.tournament.usingScheduleTemplate);
+  const [usingTemplate] = useSubscription(thisTourn.usingScheduleTemplate);
 
   const showDeleteButton = !phase.isFullPhase() || (!usingTemplate && phase.phaseType !== PhaseTypes.Prelim);
+  const canMoveUp = thisTourn.canMovePhaseUp(phase);
+  const canMoveDown = thisTourn.canMovePhaseDown(phase);
 
   return (
     <AccordionSummary
@@ -117,6 +131,38 @@ function PhaseAccordionHeader(props: PhaseAccordionHeaderProps) {
         </IconButton>
       </div>
       <div>
+        {(canMoveUp || canMoveDown) && (
+          <>
+            <Tooltip title="Move up">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={!canMoveUp}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    tournManager.movePhaseUp(phase);
+                  }}
+                >
+                  <ArrowUpward />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Move down">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={!canMoveDown}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    tournManager.movePhaseDown(phase);
+                  }}
+                >
+                  <ArrowDownward />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
+        )}
         {showDeleteButton && (
           <Tooltip title="Delete stage">
             <span>
@@ -257,28 +303,34 @@ function PhaseEditor(props: IPhaseEditorProps) {
             ))}
           </List>
         </Box>
-        {!usingTemplate && (
-          <Button
-            sx={{ marginTop: 1 }}
-            size="small"
-            variant="outlined"
-            startIcon={<Add />}
-            onClick={() => tournManager.addPool(phase)}
-          >
-            Add Pool
-          </Button>
-        )}
       </Grid>
       <Grid xs={7}>
         <Typography sx={{ marginTop: 1 }} variant="subtitle2">
           {selectedPool?.name}
         </Typography>
         {selectedPool && <PoolDetail selectedPool={selectedPool} hasWildCardAdvancement={wcRules.length > 0} />}
+      </Grid>
+      <Grid xs>
+        {!usingTemplate && (
+          <Button size="small" variant="outlined" startIcon={<Add />} onClick={() => tournManager.addPool(phase)}>
+            Add Pool
+          </Button>
+        )}
+      </Grid>
+      <Grid xs="auto">
         {canAddTB && (
-          <LinkButton onClick={() => tournManager.addTiebreakerAfter(phase)}>Add tiebreaker stage</LinkButton>
+          <LinkButton onClick={() => tournManager.addTiebreakerAfter(phase)}>
+            <Add fontSize="small" />
+            Add tiebreaker stage
+          </LinkButton>
         )}
         <br />
-        {canAddFinals && <LinkButton onClick={() => tournManager.addFinalsPhase()}>Add finals stage</LinkButton>}
+        {canAddFinals && (
+          <LinkButton onClick={() => tournManager.addFinalsPhase()}>
+            <Add fontSize="small" />
+            Add finals stage
+          </LinkButton>
+        )}
       </Grid>
     </Grid>
   );
@@ -334,12 +386,42 @@ function MinorPhaseSection(props: IMinorPhaseSectionProps) {
     <FormGroup>
       <FormControlLabel
         control={
-          <Checkbox size="small" checked={usesNumeric} onChange={(e) => handleUsesNumericChange(e.target.checked)} />
+          <Checkbox
+            size="small"
+            checked={usesNumeric}
+            disabled={phase.preventConvertToNonNumericRounds()}
+            onChange={(e) => handleUsesNumericChange(e.target.checked)}
+          />
         }
         label="Uses numeric round"
         sx={{ width: 'fit-content' }}
       />
     </FormGroup>
+  );
+}
+
+function ScheduleZeroState() {
+  const tournManager = useContext(TournamentContext);
+
+  return (
+    <Grid container>
+      <Grid xs />
+      <Grid xs="auto">
+        <Box sx={{ py: 13 }}>
+          <div>
+            <Typography variant="body2" sx={{ marginBottom: 1 }}>
+              Choose a template to get started
+            </Typography>
+          </div>
+          <div>
+            <LinkButton onClick={() => tournManager.startNewCustomSchedule()}>
+              <Tune fontSize="small" /> Create a custom schedule instead
+            </LinkButton>
+          </div>
+        </Box>
+      </Grid>
+      <Grid xs />
+    </Grid>
   );
 }
 

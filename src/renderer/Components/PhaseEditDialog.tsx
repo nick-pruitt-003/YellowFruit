@@ -1,10 +1,31 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import {
+  Alert,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  FormGroup,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { TournamentContext } from '../TournamentManager';
 import { PhaseEditModalContext } from '../Modal Managers/TempPhaseManager';
 import useSubscription from '../Utils/CustomHooks';
-import { hotkeyFormat } from '../Utils/GeneralReactUtils';
+import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
+import { PhaseTypes } from '../DataModel/Phase';
+
+const phaseTypeDisplayName = {
+  [PhaseTypes.Prelim]: 'Prelim',
+  [PhaseTypes.Playoff]: 'Playoff',
+  [PhaseTypes.Tiebreaker]: 'Tiebreaker',
+  [PhaseTypes.Finals]: 'Finals',
+};
 
 export default function PhaseEditDialog() {
   const tournManager = useContext(TournamentContext);
@@ -29,6 +50,7 @@ function PhaseEditDialogCore() {
   const [isOpen] = useSubscription(modalManager.modalIsOpen);
   const [hasErrors] = useSubscription(modalManager.hasAnyErrors());
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
+  const phaseType = modalManager.originalPhaseOpened?.phaseType;
 
   const handleAccept = () => {
     acceptButtonRef.current?.focus();
@@ -46,16 +68,22 @@ function PhaseEditDialogCore() {
     <Dialog open={isOpen} fullWidth maxWidth="sm" onClose={handleCancel}>
       <DialogTitle>Edit Stage</DialogTitle>
       <DialogContent>
-        <PhaseNameField />
+        <Grid container>
+          <Grid xs>
+            <PhaseNameField />
+          </Grid>
+          <Grid xs="auto">
+            <Typography sx={{ marginTop: 2, paddingLeft: 1 }}>
+              Type: {phaseType ? phaseTypeDisplayName[phaseType] : ''}
+            </Typography>
+          </Grid>
+        </Grid>
         {modalManager.shouldShowRoundFields() && <PhaseRoundFields />}
+        <PhaseConvertFields />
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" onClick={handleCancel}>
-          {hotkeyFormat('&Cancel')}
-        </Button>
-        <Button variant="outlined" onClick={handleAccept} disabled={hasErrors} ref={acceptButtonRef}>
-          {hotkeyFormat('&Accept')}
-        </Button>
+        <YfCancelButton onClick={handleCancel} />
+        <YfAcceptButton onClick={handleAccept} disabled={hasErrors} ref={acceptButtonRef} />
       </DialogActions>
     </Dialog>
   );
@@ -74,6 +102,7 @@ function PhaseNameField() {
     <TextField
       sx={{ marginTop: 1 }}
       fullWidth
+      spellCheck={false}
       autoFocus
       variant="outlined"
       size="small"
@@ -111,9 +140,8 @@ function PhaseRoundFields() {
     <>
       <div style={{ paddingLeft: '4px' }}>
         <span style={{ padding: '0 10px' }}>Rounds</span>
-        <TextField
+        <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          type="number"
           inputProps={{ min: 1, max: 999 }}
           variant="outlined"
           size="small"
@@ -125,9 +153,8 @@ function PhaseRoundFields() {
           }}
         />
         <span style={{ padding: '0 10px' }}>to</span>
-        <TextField
+        <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          type="number"
           inputProps={{ min: 1, max: 999 }}
           variant="outlined"
           size="small"
@@ -145,5 +172,61 @@ function PhaseRoundFields() {
         </Alert>
       )}
     </>
+  );
+}
+
+function PhaseConvertFields() {
+  const modalManager = useContext(PhaseEditModalContext);
+  const thisPhase = modalManager.originalPhaseOpened;
+  const [convertToFinals, setConvertToFinals] = useSubscription(modalManager?.convertToFinals || false);
+  const [convertToTB, setConvertToTB] = useSubscription(modalManager?.convertToTiebreaker || false);
+
+  const handleCheckConvToFinals = (checked: boolean) => {
+    setConvertToFinals(checked);
+    modalManager.setConvertToFinals(checked);
+  };
+  const handleCheckConvToTB = (checked: boolean) => {
+    setConvertToTB(checked);
+    modalManager.setConvertToTiebreaker(checked);
+  };
+
+  if (!thisPhase) return null;
+  if (!modalManager.canConvToFinals && !modalManager.canConvToTB) return null;
+
+  return (
+    <Grid container sx={{ my: 1 }}>
+      <Grid xs={6}>
+        {modalManager.canConvToFinals && (
+          <FormGroup>
+            <Tooltip
+              placement="bottom"
+              title="Designate this stage as containing finals matches rather than standard pool play. This action will delete all pools in this stage."
+            >
+              <FormControlLabel
+                label="Convert to finals"
+                control={
+                  <Checkbox checked={convertToFinals} onChange={(e) => handleCheckConvToFinals(e.target.checked)} />
+                }
+              />
+            </Tooltip>
+          </FormGroup>
+        )}
+      </Grid>
+      <Grid xs={6}>
+        {modalManager.canConvToTB && (
+          <FormGroup>
+            <Tooltip
+              placement="right"
+              title="Designate this stage as containing tiebreaker matches rather than standard pool play. This action will delete all pools in this stage."
+            >
+              <FormControlLabel
+                label="Convert to tiebreakers"
+                control={<Checkbox checked={convertToTB} onChange={(e) => handleCheckConvToTB(e.target.checked)} />}
+              />
+            </Tooltip>
+          </FormGroup>
+        )}
+      </Grid>
+    </Grid>
   );
 }

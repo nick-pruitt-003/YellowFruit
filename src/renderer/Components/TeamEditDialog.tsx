@@ -24,7 +24,7 @@ import {
   MenuList,
   IconButton,
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import React, { ReactElement, forwardRef, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { ArrowDropDown, Delete } from '@mui/icons-material';
@@ -33,7 +33,7 @@ import useSubscription from '../Utils/CustomHooks';
 import { TeamEditModalContext } from '../Modal Managers/TempTeamManager';
 import { Team } from '../DataModel/Team';
 import { ValidationStatuses } from '../DataModel/Interfaces';
-import { hotkeyFormat } from '../Utils/GeneralReactUtils';
+import { hotkeyFormat, YfAcceptButton, YfCancelButton } from '../Utils/GeneralReactUtils';
 
 function TeamEditDialog() {
   const tournManager = useContext(TournamentContext);
@@ -117,7 +117,7 @@ function TeamEditDialogCore() {
           <Box
             sx={{
               height: 400,
-              '& .MuiGrid2-root': { display: 'flex', alignItems: 'end' },
+              '& .MuiGrid-root': { display: 'flex', alignItems: 'end' },
               '& .MuiFormHelperText-root': { whiteSpace: 'nowrap' },
             }}
           >
@@ -132,18 +132,14 @@ function TeamEditDialogCore() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={handleCancel}>
-            {hotkeyFormat('&Cancel')}
-          </Button>
+          <YfCancelButton onClick={handleCancel} />
           <SaveAndNewButtons
             disabled={disableSaveAndNew}
             onClickSaveAndNew={handleAcceptAndStay}
             onClickSaveAndNextLetter={handleAcceptAndNextLetter}
             ref={saveAndNewButtonRef}
           />
-          <Button variant="outlined" onClick={handleAccept} ref={acceptButtonRef}>
-            {hotkeyFormat('&Accept')}
-          </Button>
+          <YfAcceptButton onClick={handleAccept} ref={acceptButtonRef} />
         </DialogActions>
       </Dialog>
       <ErrorDialog />
@@ -155,7 +151,7 @@ interface TeamAndLetterFieldsProps {
   autofocusOrgName: boolean;
 }
 
-const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameFieldRef) => {
+const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameFieldRef: React.ForwardedRef<HTMLInputElement>) => {
   const { autofocusOrgName } = props;
   const tournManager = useContext(TournamentContext);
   const modalManager = useContext(TeamEditModalContext);
@@ -182,11 +178,12 @@ const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameF
 
   return (
     <>
-      <Grid xs={9} sm={6}>
+      <Grid size={{ xs: 9, sm: 6 }}>
         <TextField
           inputRef={orgNameFieldRef}
           sx={{ marginTop: 1 }}
           label="School / Organization"
+          spellCheck={false}
           fullWidth
           autoFocus={autofocusOrgName}
           variant="outlined"
@@ -201,10 +198,11 @@ const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameF
           }}
         />
       </Grid>
-      <Grid xs={3} sm={2}>
+      <Grid size={{ xs: 3, sm: 2 }}>
         <TextField
           sx={{ marginTop: 1, width: '10ch' }}
           placeholder="A, B, etc."
+          spellCheck={false}
           variant="outlined"
           size="small"
           error={teamLetter !== '' && teamNameValidationStatus === ValidationStatuses.Error}
@@ -256,7 +254,7 @@ function TeamCheckBoxes() {
   return (
     <>
       {thisTournament.trackSmallSchool && (
-        <Grid xs={2} md={1} sx={{ display: 'flex', alignItems: 'end' }}>
+        <Grid size={{ xs: 2, md: 1 }} sx={{ display: 'flex', alignItems: 'end' }}>
           <TeamFormCheckBox
             label="SS"
             extraSpace
@@ -265,7 +263,7 @@ function TeamCheckBoxes() {
         </Grid>
       )}
       {thisTournament.trackJV && (
-        <Grid xs={2} md={1}>
+        <Grid size={{ xs: 2, md: 1 }}>
           <TeamFormCheckBox
             label="JV"
             extraSpace
@@ -274,7 +272,7 @@ function TeamCheckBoxes() {
         </Grid>
       )}
       {thisTournament.trackUG && (
-        <Grid xs={2} md={1}>
+        <Grid size={{ xs: 2, md: 1 }}>
           <TeamFormCheckBox
             label="UG"
             extraSpace
@@ -283,7 +281,7 @@ function TeamCheckBoxes() {
         </Grid>
       )}
       {thisTournament.trackDiv2 && (
-        <Grid xs={2} md={1}>
+        <Grid size={{ xs: 2, md: 1 }}>
           <TeamFormCheckBox
             label="D2"
             extraSpace
@@ -349,8 +347,22 @@ function PlayersGrid(props: IPlayersGridProps) {
   const sessionID = useSubscription(modalManager.sessionID);
   const rows: React.JSX.Element[] = [];
 
+  const switchRowFocus = (rowToFocus: number, isYearField?: boolean) => {
+    if (rowToFocus < 0 || rowToFocus >= numRows) return;
+
+    const id = isYearField ? playerYearFieldId(rowToFocus) : playerNameFieldId(rowToFocus);
+    document.getElementById(id)?.focus();
+  };
+
   for (let i = 0; i < numRows; i++) {
-    rows.push(<PlayerGridRow key={`${sessionID}-${i}`} rowIdx={i} autoFocus={autoFocusFirstPlayer && i === 0} />);
+    rows.push(
+      <PlayerGridRow
+        key={`${sessionID}-${i}`}
+        rowIdx={i}
+        autoFocus={autoFocusFirstPlayer && i === 0}
+        switchRowFocus={switchRowFocus}
+      />,
+    );
   }
   return rows;
 }
@@ -358,10 +370,11 @@ function PlayersGrid(props: IPlayersGridProps) {
 interface IPlayerGridRowProps {
   rowIdx: number;
   autoFocus: boolean;
+  switchRowFocus: (rowToFocus: number, isYearField?: boolean) => void;
 }
 
 function PlayerGridRow(props: IPlayerGridRowProps) {
-  const { rowIdx, autoFocus } = props;
+  const { rowIdx, autoFocus, switchRowFocus } = props;
   const tournManager = useContext(TournamentContext);
   const thisTournament = tournManager.tournament;
   const modalManager = useContext(TeamEditModalContext);
@@ -410,9 +423,11 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
 
   return (
     <Grid container spacing={1}>
-      <Grid xs={5} md={6}>
+      <Grid size={{ xs: 5, md: 6 }}>
         <TextField
+          id={playerNameFieldId(rowIdx)}
           placeholder="Player Name"
+          spellCheck={false}
           fullWidth
           autoFocus={autoFocus}
           variant="outlined"
@@ -424,13 +439,17 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
           onBlur={handlePlayerNameBlur}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handlePlayerNameBlur();
+            if (e.key === 'ArrowUp') switchRowFocus(rowIdx - 1);
+            if (e.key === 'ArrowDown') switchRowFocus(rowIdx + 1);
           }}
         />
       </Grid>
       {thisTournament.trackPlayerYear && (
-        <Grid xs={2}>
+        <Grid size={{ xs: 2 }}>
           <TextField
+            id={playerYearFieldId(rowIdx)}
             placeholder="Grade / Yr."
+            spellCheck={false}
             fullWidth
             variant="outlined"
             size="small"
@@ -441,12 +460,14 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
             onBlur={() => modalManager.changePlayerYear(rowIdx, playerYear)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') modalManager.changePlayerYear(rowIdx, playerYear);
+              if (e.key === 'ArrowUp') switchRowFocus(rowIdx - 1, true);
+              if (e.key === 'ArrowDown') switchRowFocus(rowIdx + 1, true);
             }}
           />
         </Grid>
       )}
       {thisTournament.trackUG && (
-        <Grid xs={2} md={1}>
+        <Grid size={{ xs: 2, md: 1 }}>
           <TeamFormCheckBox
             label="UG"
             extraSpace={warningExists}
@@ -455,7 +476,7 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
         </Grid>
       )}
       {thisTournament.trackDiv2 && (
-        <Grid xs={2} md={1}>
+        <Grid size={{ xs: 2, md: 1 }}>
           <TeamFormCheckBox
             label="D2"
             extraSpace={warningExists}
@@ -464,7 +485,7 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
         </Grid>
       )}
       {teamHasPlayed && player?.sourcePlayer && (
-        <Grid xs={1}>
+        <Grid size={{ xs: 1 }}>
           <IconButton disabled={playerHasPlayed} onClick={() => modalManager.deletePlayer(rowIdx)}>
             <Delete />
           </IconButton>
@@ -528,6 +549,14 @@ function ErrorDialog() {
       </DialogActions>
     </Dialog>
   );
+}
+
+function playerNameFieldId(rowIdx: number) {
+  return `teamEditModalPlayerName_${rowIdx}`;
+}
+
+function playerYearFieldId(rowIdx: number) {
+  return `teamEditModalPlayerYear_${rowIdx}`;
 }
 
 export default TeamEditDialog;

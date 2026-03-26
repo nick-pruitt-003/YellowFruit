@@ -1,6 +1,11 @@
-import { app, Menu, BrowserWindow, MenuItemConstructorOptions, dialog } from 'electron';
+import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import {
   exportQbjFile,
+  importGamesFromQbjMainLaunch,
+  importQbjTeams,
+  importSqbsTeams,
+  launchHelpWindow,
+  launchSqbsExportWorkflow,
   promptForStatReportLocation,
   requestToSaveYftFile,
   tryFileSwitchAction,
@@ -20,37 +25,78 @@ export default class MenuBuilder {
   readonly subMenuFileCommonElements: MenuItemConstructorOptions[] = [
     {
       label: '&Export Stat Report',
-      accelerator: 'Ctrl+U',
+      accelerator: 'CmdOrCtrl+U',
       click: () => {
         promptForStatReportLocation(this.mainWindow);
       },
     },
     {
-      label: 'Export QB&J',
-      click: () => {
-        exportQbjFile(this.mainWindow);
-      },
+      label: 'QBJ Schema',
+      submenu: [
+        {
+          label: 'Export QBJ',
+          click: () => {
+            exportQbjFile(this.mainWindow);
+          },
+        },
+        {
+          label: 'Open QBJ Tournament',
+          click: () => {
+            tryFileSwitchAction(this.mainWindow, FileSwitchActions.ImportQbjTournament);
+          },
+        },
+        {
+          label: 'Import Teams and Rosters Only',
+          click: () => {
+            importQbjTeams(this.mainWindow);
+          },
+        },
+        {
+          label: 'Import Games Only',
+          accelerator: 'CmdOrCtrl+M',
+          click: () => {
+            importGamesFromQbjMainLaunch(this.mainWindow);
+          },
+        },
+      ],
+    },
+    {
+      label: 'SQBS',
+      submenu: [
+        {
+          label: 'Export SQBS Files',
+          click: () => {
+            launchSqbsExportWorkflow(this.mainWindow);
+          },
+        },
+        {
+          label: 'Import Teams and Rosters',
+          click: () => {
+            importSqbsTeams(this.mainWindow);
+          },
+        },
+      ],
     },
     {
       type: 'separator',
     },
     {
       label: '&New Tournament',
-      accelerator: 'Ctrl+N',
+      accelerator: 'CmdOrCtrl+N',
       click: () => {
         tryFileSwitchAction(this.mainWindow, FileSwitchActions.NewFile);
       },
     },
     {
       label: '&Open',
-      accelerator: 'Ctrl+O',
+      accelerator: 'CmdOrCtrl+O',
       click: () => {
         tryFileSwitchAction(this.mainWindow, FileSwitchActions.OpenYftFile);
       },
     },
     {
       label: '&Save',
-      accelerator: 'Ctrl+S',
+      accelerator: 'CmdOrCtrl+S',
       click: () => {
         requestToSaveYftFile(this.mainWindow);
       },
@@ -69,10 +115,7 @@ export default class MenuBuilder {
       {
         label: 'About YellowFruit',
         click: () => {
-          dialog.showMessageBoxSync(this.mainWindow, {
-            title: 'About YellowFruit',
-            message: `YellowFruit\n\nVersion ${app.getVersion()}`,
-          });
+          launchHelpWindow(this.mainWindow);
         },
       },
     ],
@@ -241,7 +284,7 @@ export default class MenuBuilder {
             ? [
                 {
                   label: '&Reload',
-                  accelerator: 'Ctrl+R',
+                  accelerator: 'CmdOrCtrl+R',
                   click: () => {
                     this.mainWindow.webContents.reload();
                   },
