@@ -44,12 +44,7 @@ export default function SchedulePickerCard() {
 
   const handleTemplateChange = (val: string) => {
     setSelectedTemplateName(val);
-    let newSched: StandardSchedule | null = null;
-    if (val === '') {
-      newSched = null;
-    } else {
-      newSched = getStdSchedule(val, size);
-    }
+    const newSched = val !== '' ? getStdSchedule(val, size) : null;
     setPreviewedSchedule(newSched);
   };
 

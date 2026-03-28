@@ -1,4 +1,3 @@
-/* eslint-disable react/require-default-props */
 import { useContext, useState, useEffect, useMemo, forwardRef, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import {
@@ -295,7 +294,7 @@ function CarryoverPhaseSelect() {
   );
 }
 
-const TuhTotalField = forwardRef((props: {}, ref: React.ForwardedRef<HTMLInputElement>) => {
+const TuhTotalField = forwardRef((props: Record<string, never>, ref: React.ForwardedRef<HTMLInputElement>) => {
   const modalManager = useContext(MatchEditModalContext);
   const tournManager = useContext(TournamentContext);
   const thisTournament = tournManager.tournament;
@@ -360,7 +359,6 @@ function TeamSelect(props: ITeamSelectProps) {
 
   const allTeamNames = useMemo(
     () => thisTournament.getListOfAllTeams().map((tm) => tm.name),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [thisTournament, modalManager.modalIsOpen],
   );
 
@@ -381,7 +379,6 @@ function TeamSelect(props: ITeamSelectProps) {
       isOptionEqualToValue={isOptionEqualToValue}
       renderInput={(params) => (
         <TextField
-          // eslint-disable-next-line react/jsx-props-no-spreading
           {...params}
           size="small"
           autoFocus={
@@ -409,7 +406,6 @@ function TeamScoreField(props: ITeamScoreProps) {
   const [valStatus] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam).totalScoreFieldValidation.status);
   const [valMsg] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam).totalScoreFieldValidation.message);
   const [forfeit] = useSubscription(modalManager.tempMatch.isForfeit());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const divisor = useMemo(() => thisTournament.scoringRules.totalDivisor, [modalManager.modalIsOpen]);
 
   const handleBlur = () => {

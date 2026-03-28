@@ -4,7 +4,6 @@
  * https://schema.quizbowl.technology/match
  */
 
-// eslint-disable-next-line import/no-cycle
 import { IQbjPhase, Phase } from './Phase';
 import { IQbjObject, IQbjRefPointer, IYftDataModelObject, IYftFileObject, ValidationStatuses } from './Interfaces';
 import { MatchTeam, IQbjMatchTeam } from './MatchTeam';
@@ -15,7 +14,6 @@ import MatchValidationMessage, {
   MatchValidationCollection,
   MatchValidationType,
 } from './MatchValidationMessage';
-// eslint-disable-next-line import/no-cycle
 import { LeftOrRight, wlt } from '../Utils/UtilTypes';
 import AnswerType from './AnswerType';
 import { ScoringRules } from './ScoringRules';

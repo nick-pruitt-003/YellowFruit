@@ -1,4 +1,3 @@
-/* eslint-disable import/no-cycle */
 import { Match } from '../DataModel/Match';
 import Registration from '../DataModel/Registration';
 import { Team } from '../DataModel/Team';

@@ -5,7 +5,6 @@ import React from 'react';
 
 interface IYfCardProps {
   title: React.JSX.Element | string;
-  // eslint-disable-next-line react/require-default-props
   secondaryHeader?: React.JSX.Element;
 }
 

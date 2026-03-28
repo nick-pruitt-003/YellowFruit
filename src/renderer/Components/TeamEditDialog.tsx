@@ -73,7 +73,6 @@ function TeamEditDialogCore() {
     if (maxTeams === null) return false;
     if (numTeams >= maxTeams) return true;
     return tournManager.teamBeingModified === null && numTeams >= maxTeams - 1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thisTournament, tournManager.teamBeingModified, modalManager.sessionID]);
 
   const orgNameFieldRef = useRef<HTMLInputElement>(null);

@@ -4,7 +4,6 @@ import { Phase, PhaseTypes } from '../Phase';
 import { Pool, makePoolSet, snakeSeed } from '../Pool';
 import StandardSchedule from '../StandardSchedule';
 
-// eslint-disable-next-line import/prefer-default-export
 export const Sched33Teams10RoundsPlusF: StandardSchedule = {
   fullName: '33 Teams - Pools of 5 or 6 Teams, then Pools of 5 or 6 Teams with Parallel Top Pools',
   shortName: '10 Rounds + Finals',

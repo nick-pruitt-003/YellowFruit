@@ -167,11 +167,9 @@ function HelpTextDialogContent(props: IHelpTextDialogContentProps) {
   if (!contents) return 'No help text';
 
   return contents.map((sec, idx) => (
-    // eslint-disable-next-line react/no-array-index-key
     <div key={idx}>
       {sec.header && <Typography variant="subtitle2">{sec.header}</Typography>}
       {sec.content.map((par, pidx) => (
-        // eslint-disable-next-line react/no-array-index-key
         <Typography key={pidx} variant="body2" sx={{ marginBottom: 2 }}>
           {par}
         </Typography>

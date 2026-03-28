@@ -1,4 +1,3 @@
-/* eslint-disable react/require-default-props */
 /* eslint-disable prefer-destructuring */
 import { useContext } from 'react';
 import Grid from '@mui/material/Grid';

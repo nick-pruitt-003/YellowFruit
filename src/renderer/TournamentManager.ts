@@ -325,7 +325,7 @@ export class TournamentManager {
         if (TournamentManager.isNameOfDateField(key)) return dayjs(value).toDate(); // must be ISO 8601 format
         return value;
       });
-    } catch (err: any) {
+    } catch {
       this.openGenericModal('Invalid File', 'This file does not contain valid JSON.');
     }
     return objFromFile;
@@ -401,7 +401,7 @@ export class TournamentManager {
       return;
     }
 
-    let refTargets: IRefTargetDict = {};
+    let refTargets: IRefTargetDict;
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err: any) {
@@ -448,7 +448,7 @@ export class TournamentManager {
     let registrationFromFile;
     try {
       registrationFromFile = parser.parseRegistration(registration as IIndeterminateQbj);
-    } catch (err: any) {
+    } catch {
       // TODO: track errors?
       return 0;
     }
@@ -595,7 +595,7 @@ export class TournamentManager {
       return importResults;
     }
 
-    let refTargets: IRefTargetDict = {};
+    let refTargets: IRefTargetDict;
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err: any) {

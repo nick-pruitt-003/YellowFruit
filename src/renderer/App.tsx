@@ -82,7 +82,6 @@ function TournamentEditor() {
     } else if (activePage === ApplicationPages.Teams && mgr.currentTeamsPageView === 2) {
       mgr.compileStats();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mgr, mgr.tournament]);
 
   useHotkeys('alt+shift+right', () => {

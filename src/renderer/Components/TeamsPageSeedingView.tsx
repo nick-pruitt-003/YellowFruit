@@ -1,4 +1,3 @@
-/* eslint-disable react/no-array-index-key */
 import Grid from '@mui/material/Grid';
 import { useContext, useState } from 'react';
 import {

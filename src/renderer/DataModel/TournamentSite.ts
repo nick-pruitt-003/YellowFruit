@@ -9,9 +9,9 @@ export interface IQbjTournamentSite extends IQbjObject {
   /** Specific location info such as an address */
   place?: string;
   /** The latitude of the tournament's site (for geolocation) */
-  latitude?: Number;
+  latitude?: number;
   /** The longitude of the tournament's site (for geolocation) */
-  longitude?: Number;
+  longitude?: number;
 }
 
 /** YellowFruit implementation of the TournamentSite object */

@@ -9,7 +9,6 @@ import { Phase, PhaseTypes } from './Phase';
 import { Player } from './Player';
 import { Pool } from './Pool';
 import { Round } from './Round';
-// eslint-disable-next-line import/no-cycle
 import { StatTypes, columnName, columnTooltip } from './StatReportDataTypes';
 import {
   PhaseStandings,
@@ -21,7 +20,6 @@ import {
   TeamDetailMatchResult,
 } from './StatSummaries';
 import { Team } from './Team';
-// eslint-disable-next-line import/no-cycle
 import Tournament from './Tournament';
 
 export default class HtmlReportGenerator {

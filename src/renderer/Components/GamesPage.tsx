@@ -130,7 +130,6 @@ function TeamFilterField(props: ITeamFilterFieldProps) {
       onInputChange={(event, newVal) => setFilterInputValue(newVal)}
       options={filterOptions}
       isOptionEqualToValue={isOptionEqualToValue}
-      // eslint-disable-next-line react/jsx-props-no-spreading
       renderInput={(params) => <TextField {...params} size="small" label="Filter by team" />}
     />
   );
