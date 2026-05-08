@@ -55,6 +55,15 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
 
   lightningPoints?: number;
 
+  /**
+   * Number of correct tossups in this match that did NOT award a bonus — imported
+   * from the `correct_tossups_without_bonuses` QBJ field.  Distinct from
+   * `overTimeBuzzes`, which represents YF-native overtime tossups.  Used by
+   * `getBonusesHeard()` so multi-quarter formats (e.g. LIQBA_STANDARD Q1/Q3) do
+   * not inflate the PPB denominator.
+   */
+  importedNonBonusTossups?: number;
+
   /** Performances of each player. A player being listed here doesn't necessarily mean they actually played in this game. */
   matchPlayers: MatchPlayer[] = [];
 
@@ -140,7 +149,7 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
   /**
    * Are there player-level stats for this match, as opposed to just team scores?
    */
-  // eslint-disable-next-line class-methods-use-this
+   
   playerLevelStatsExist() {
     return true; // right now, we require entering individual stats
   }
@@ -240,7 +249,9 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
       tot += mp.getTotalBuzzes(true);
     });
     if (scoringRules.overtimeIncludesBonuses) return tot;
-    return tot - this.getNumOvertimeBuzzes(true);
+    // Subtract YF-native overtime tossups AND any imported non-bonus tossups
+    // (e.g., LIQBA_STANDARD Q1/Q3 quarters that don't award bonuses).
+    return tot - this.getNumOvertimeBuzzes(true) - (this.importedNonBonusTossups ?? 0);
   }
 
   getBonusPoints(): number {
@@ -272,7 +283,8 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     return (this.points || 0) - this.getOvertimePoints();
   }
 
-  /** Number of tossups answered with no bonuses. In YF, this means overtime */
+  /** Number of tossups answered with no bonuses. Includes YF-native overtime
+   *  buzzes plus any `importedNonBonusTossups` read from the QBJ file. */
   getCorrectTossupsWithoutBonuses(): number {
     let total = 0;
     for (const ac of this.overTimeBuzzes) {
@@ -280,7 +292,7 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
         total += ac.number || 0;
       }
     }
-    return total;
+    return total + (this.importedNonBonusTossups ?? 0);
   }
 
   /** Number of tossups answered with no bonuses. In YF, this means overtime */

@@ -1,4 +1,4 @@
-/* eslint-disable class-methods-use-this */
+ 
 // Parse objects from a JSON file into internal YellowFruit objects
 
 import stringSimilarity from 'string-similarity-js';
@@ -44,11 +44,6 @@ function unicodeTruncate(str: string, max: number): string {
   return codePoints.length <= max ? str : codePoints.slice(0, max).join('');
 }
 
-/** Count Unicode code points (not UTF-16 code units). */
-export function unicodeLength(str: string): number {
-  return Array.from(str).length;
-}
-
 /** Threshold (0 to 1 scale) for string matching of team and player names when importing data. Similarity must be at leaset this high for us to use the match. */
 const stringSimConfThreshold = 0.8;
 
@@ -66,6 +61,12 @@ export default class FileParser {
   phasesById: IYftObjectDict<Phase> = {};
 
   playersById: IYftObjectDict<Player> = {};
+
+  /** Non-fatal issues collected during parsing; caller should surface these to the user */
+  warnings: string[] = [];
+
+  /** True if the file appears to originate from NAQT's registration system */
+  isNaqtFile: boolean = false;
 
   answerTypesById: IYftObjectDict<AnswerType> = {};
 
@@ -148,6 +149,12 @@ export default class FileParser {
 
   parseTournament(obj: IQbjTournament): Tournament {
     const yfExtraData = (obj as IYftFileTournament).YfData;
+
+    // NAQT's registration system exports a tournament_id extension field.
+    // Use it to give more targeted guidance when teams have empty rosters.
+    if ((obj as Record<string, unknown>).tournament_id !== undefined) {
+      this.isNaqtFile = true;
+    }
 
     if (obj.name && obj.name !== Tournament.placeholderName) this.tourn.name = obj.name;
     if (obj.startDate) this.tourn.startDate = obj.startDate;
@@ -414,7 +421,11 @@ export default class FileParser {
     const yfTeam = new Team(unicodeTruncate(name.trim(), Registration.maxNameLength + 1 + Team.maxLetterLength));
     const yfPlayers = this.parsePlayerList(players as IIndeterminateQbj[], yfTeam.name);
     if (yfPlayers.length < 1) {
-      throw new Error(`Team ${name} doesn't have any players.`);
+      const naqtHint = this.isNaqtFile
+        ? ' This file appears to be from NAQT\'s registration system — update all rosters via the check-in process before generating the QBJ file.'
+        : '';
+      this.warnings.push(`Team "${name}" has no players and was skipped.${naqtHint}`);
+      return null;
     }
     yfTeam.players = yfPlayers;
     if (yfExtraData) {
@@ -825,6 +836,12 @@ export default class FileParser {
     yfMatchTeam.forfeitLoss = qbjMatchTeam.forfeitLoss || false;
     yfMatchTeam.bonusBouncebackPoints = qbjMatchTeam.bonusBouncebackPoints;
     yfMatchTeam.lightningPoints = qbjMatchTeam.lightningPoints;
+    // Imported non-bonus tossup count (e.g., LIQBA_STANDARD Q1/Q3 quarters).
+    // Stored separately from overTimeBuzzes so PPB denominator is correct without
+    // affecting getOvertimePoints() / getPointsForPPG().
+    if (qbjMatchTeam.correctTossupsWithoutBonuses != null) {
+      yfMatchTeam.importedNonBonusTossups = qbjMatchTeam.correctTossupsWithoutBonuses;
+    }
     yfMatchTeam.matchPlayers = this.parseMatchTeamMatchPlayers(qbjMatchTeam.matchPlayers as IIndeterminateQbj[], team);
     for (const otAC of yfExtraData?.overTimeBuzzes || []) {
       const tempAnswerCount = this.parsePlayerAnswerCount(otAC as IIndeterminateQbj);
@@ -1264,6 +1281,6 @@ function removeYearFromPlayerName(nameRaw: string) {
 /** PlayerAnswerCounts in MODAQ use 'answer' when they should use 'answer_type' */
 function fixModaqAnswerType(pac: IQbjPlayerAnswerCount) {
   if (!pac.answerType) {
-    pac.answerType = (pac as any).answer;
+    pac.answerType = (pac as IQbjPlayerAnswerCount & { answer?: string }).answer;
   }
 }
