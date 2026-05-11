@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-props-no-spreading */
 import {
   Button,
   ButtonProps,
@@ -53,7 +52,7 @@ interface ExpandButtonProps extends IconButtonProps {
 
 // from https://mui.com/material-ui/react-card/
 export const ExpandButton = styled((props: ExpandButtonProps) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { expand, ...other } = props;
   return <IconButton {...other} />;
 })(({ theme, expand }) => ({
@@ -92,21 +91,28 @@ export function CollapsibleArea(props: React.PropsWithChildren<ICollapsibleAreaP
   );
 }
 
-function numberInputOnWheelPreventChange(e: any) {
+function numberInputOnWheelPreventChange(e: React.WheelEvent<HTMLElement>) {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  const input = e.target;
+
   // Prevent the input value change
-  e.target.blur();
+  input.blur();
 
   // Prevent the page/container scrolling
   e.stopPropagation();
+  e.preventDefault();
 
   // Refocus immediately, on the next tick (after the current function is done)
-  setTimeout(() => e.target.focus(), 0);
+  setTimeout(() => input.focus(), 0);
 }
 
 /** A numeric field that stops the mouse wheel from changing it */
-export function YfNumericField(props: TextFieldProps) {
-  const { ...other } = props;
-  return <TextField type="number" onWheel={numberInputOnWheelPreventChange} {...other} />;
+export function YfNumericField({ onWheel, ...rest }: TextFieldProps) {
+  const composedOnWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    numberInputOnWheelPreventChange(e);
+    onWheel?.(e);
+  };
+  return <TextField {...rest} type="number" onWheel={composedOnWheel} />;
 }
 
 export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef: React.ForwardedRef<HTMLButtonElement>) => {

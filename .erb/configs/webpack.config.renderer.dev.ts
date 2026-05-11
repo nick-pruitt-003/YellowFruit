@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import ESLintPlugin from 'eslint-webpack-plugin';
 import chalk from 'chalk';
 import { merge } from 'webpack-merge';
 import { execSync, spawn } from 'child_process';
@@ -77,6 +78,12 @@ const configuration: webpack.Configuration = {
     }),
 
     new webpack.HotModuleReplacementPlugin(),
+
+    new ESLintPlugin({
+      extensions: ['ts', 'tsx'],
+      context: webpackPaths.srcPath,
+      cache: true,
+    }),
 
     new HtmlWebpackPlugin({
       filename: path.join('index.html'),

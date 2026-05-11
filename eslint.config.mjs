@@ -9,16 +9,23 @@ export default tseslint.config(
       'node_modules',
       'release/app/dist',
       'release/build',
-      '.erb/dll',
+      '.erb/**',        // webpack build scripts — not production code
+      '.eslintrc.js',   // legacy config file, ignored by flat config anyway
       '**/*.d.ts',
       '**/*.css.d.ts',
       '**/*.sass.d.ts',
       '**/*.scss.d.ts',
+      'logs',
+      '*.log',
+      'npm-debug.log.*',
+      'coverage',
+      '.eslintcache',
+      '.idea',
+      '.DS_Store',
     ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
-  // Type-aware React rules with TypeScript project service
   eslintReact.configs['recommended-typescript'],
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -35,17 +42,52 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    settings: {
+      'react-x': {
+        // Auto-detect React version from package.json instead of using the
+        // hardcoded default (19.2.4). Affects semantic analysis of React APIs.
+        version: 'detect',
+        // useSubscription returns [T, Dispatch<T>] just like useState, so
+        // register it so the analyzer can reason about state in components that use it.
+        additionalStateHooks: '/^useSubscription$/u',
+      },
+    },
     rules: {
-      // React hooks — rules-of-hooks is in recommended-typescript; add exhaustive-deps explicitly
-      '@eslint-react/exhaustive-deps': 'warn',
-
-      // TypeScript overrides
+      // ── TypeScript ─────────────────────────────────────────────────────────
       'no-shadow': 'off',
       '@typescript-eslint/no-shadow': 'error',
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        vars: 'all',
+        args: 'after-used',
+        argsIgnorePattern: '^_',   // honour _param convention for unused args
+        ignoreRestSiblings: true,
+      }],
+      // Legacy parsing/IPC code uses `any` extensively; warn but don't block.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Electron main process uses require() for dynamic imports.
+      '@typescript-eslint/no-require-imports': 'off',
 
-      // Style
+      // ── Actual bug catchers ─────────────────────────────────────────────
+      'no-useless-assignment': 'error',
+      '@typescript-eslint/no-wrapper-object-types': 'error',
+      '@typescript-eslint/no-empty-object-type': 'error',
+
+      // ── React 19 migration hints — informational, not bugs ──────────────
+      '@eslint-react/no-use-context': 'off',
+      '@eslint-react/no-context-provider': 'off',
+      '@eslint-react/no-forward-ref': 'off',
+      '@eslint-react/use-state': 'off',
+      '@eslint-react/no-unnecessary-use-prefix': 'off',
+      '@eslint-react/no-array-index-key': 'warn',
+      '@eslint-react/set-state-in-effect': 'warn',
+      '@eslint-react/exhaustive-deps': 'warn',
+      '@eslint-react/purity': 'warn',
+      // Type-aware: catches {count && <Foo/>} bugs when count could be 0.
+      // Accurate here because strictNullChecks is enabled in tsconfig.
+      '@eslint-react/no-leaked-conditional-rendering': 'warn',
+
+      // ── Style ──────────────────────────────────────────────────────────
       'no-underscore-dangle': 'off',
       'no-restricted-syntax': 'off',
       'no-plusplus': 'off',
@@ -53,13 +95,6 @@ export default tseslint.config(
       'no-use-before-define': 'off',
       'no-continue': 'off',
       yoda: 'off',
-    },
-  },
-  // .erb build scripts — relax rules that don't apply to Node build tooling
-  {
-    files: ['.erb/**/*.{js,ts,mjs,cjs}'],
-    rules: {
-      'no-console': 'off',
     },
   },
 );

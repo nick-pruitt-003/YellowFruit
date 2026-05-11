@@ -82,8 +82,6 @@ export enum IpcBidirectional {
   CheckForNewVersion = 'CheckForNewVersion',
 }
 
-export type IpcChannels = IpcRendToMain | IpcMainToRend | IpcBidirectional;
-
 export const rendererListenableEvents = [
   IpcMainToRend.openYftFile,
   IpcMainToRend.SetFilePath,

@@ -88,7 +88,7 @@ export function collectRefTargetsScoringRules(rules: IQbjScoringRules, dict: IRe
   }
 }
 
-export function collectRefTargetsRegistration(reg: IQbjRegistration, dict: IRefTargetDict) {
+function collectRefTargetsRegistration(reg: IQbjRegistration, dict: IRefTargetDict) {
   if (!reg.teams) return;
 
   for (const team of reg.teams) {
@@ -97,7 +97,7 @@ export function collectRefTargetsRegistration(reg: IQbjRegistration, dict: IRefT
   }
 }
 
-export function collectRefTargetsTeam(team: IQbjTeam, dict: IRefTargetDict) {
+function collectRefTargetsTeam(team: IQbjTeam, dict: IRefTargetDict) {
   for (const player of team.players || []) {
     if (player.id) dict[player.id] = player;
   }
@@ -107,14 +107,14 @@ export function collectRefTargetsTeam(team: IQbjTeam, dict: IRefTargetDict) {
   }
 }
 
-export function collectRefTargetsRank(rank: IQbjRank, dict: IRefTargetDict) {
+function collectRefTargetsRank(rank: IQbjRank, dict: IRefTargetDict) {
   if (!rank.ranking) return;
   let { ranking } = rank;
   ranking = ranking as IQbjRanking;
   if (ranking.id) dict[ranking.id] = ranking;
 }
 
-export function collectRefTargetsPhase(phase: IQbjPhase, dict: IRefTargetDict) {
+function collectRefTargetsPhase(phase: IQbjPhase, dict: IRefTargetDict) {
   for (const round of phase.rounds || []) {
     if (round.id) dict[round.id] = round;
     collectRefTargetsRound(round, dict);
@@ -125,7 +125,7 @@ export function collectRefTargetsPhase(phase: IQbjPhase, dict: IRefTargetDict) {
   }
 }
 
-export function collectRefTargetsRound(round: IQbjRound, dict: IRefTargetDict) {
+function collectRefTargetsRound(round: IQbjRound, dict: IRefTargetDict) {
   for (const match of round.matches || []) {
     if (match.id) dict[match.id] = match;
     collectRefTargetsMatch(match, dict);
@@ -133,14 +133,14 @@ export function collectRefTargetsRound(round: IQbjRound, dict: IRefTargetDict) {
   // Parse packets here, if we ever use them for something
 }
 
-export function collectRefTargetsPool(pool: IQbjPool, dict: IRefTargetDict) {
+function collectRefTargetsPool(pool: IQbjPool, dict: IRefTargetDict) {
   for (const pt of pool.poolTeams || []) {
     if (pt.id) dict[pt.id] = pt;
     // Assume we aren't defining new teams in the PoolTeam object
   }
 }
 
-export function collectRefTargetsMatch(match: IQbjMatch, dict: IRefTargetDict) {
+function collectRefTargetsMatch(match: IQbjMatch, dict: IRefTargetDict) {
   for (const matchTeam of match.matchTeams || []) {
     if (matchTeam.id) dict[matchTeam.id] = matchTeam;
     collectRefTargetsMatchTeam(matchTeam, dict);
@@ -149,7 +149,7 @@ export function collectRefTargetsMatch(match: IQbjMatch, dict: IRefTargetDict) {
   // Parse matchquestions here, if we ever use them
 }
 
-export function collectRefTargetsMatchTeam(matchTeam: IQbjMatchTeam, dict: IRefTargetDict) {
+function collectRefTargetsMatchTeam(matchTeam: IQbjMatchTeam, dict: IRefTargetDict) {
   for (const matchPlayer of matchTeam.matchPlayers || []) {
     if (matchPlayer.id) dict[matchPlayer.id] = matchPlayer;
     collectRefTargetsMatchPlayer(matchPlayer, dict);
@@ -158,7 +158,7 @@ export function collectRefTargetsMatchTeam(matchTeam: IQbjMatchTeam, dict: IRefT
   // Parse lineups here if we ever use them
 }
 
-export function collectRefTargetsMatchPlayer(matchPlayer: IQbjMatchPlayer, dict: IRefTargetDict) {
+function collectRefTargetsMatchPlayer(matchPlayer: IQbjMatchPlayer, dict: IRefTargetDict) {
   for (const ac of matchPlayer.answerCounts) {
     if (ac.id) dict[ac.id] = ac;
     // assume new AnswerTypes aren't being defined within PlayerAnswerCount objects

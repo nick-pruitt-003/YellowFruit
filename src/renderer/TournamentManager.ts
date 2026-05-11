@@ -163,7 +163,9 @@ export class TournamentManager {
       this.onFinishInAppStatReport();
     });
     window.electron.ipcRenderer.on(IpcMainToRend.RequestStatReport, (filePathStart) => {
-      this.generateHtmlReport(filePathStart as string);
+      this.generateHtmlReport(filePathStart as string).catch((err) => {
+        console.error('Failed to generate HTML report', err);
+      });
     });
     window.electron.ipcRenderer.on(IpcMainToRend.GenerateBackup, () => {
       this.saveBackup();
@@ -202,17 +204,17 @@ export class TournamentManager {
     });
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   protected requestAppVersion() {
     window.electron.ipcRenderer.sendMessage(IpcBidirectional.GetAppVersion);
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   protected requestBackupFile() {
     window.electron.ipcRenderer.sendMessage(IpcBidirectional.LoadBackup);
   }
 
-  //eslint-disable-next-line class-methods-use-this
+   
   protected checkForNewVersion() {
     window.electron.ipcRenderer.sendMessage(IpcBidirectional.CheckForNewVersion);
   }
@@ -259,7 +261,7 @@ export class TournamentManager {
   private openOldYftFile(fileContents: string) {
     try {
       this.tournament = parseOldYfFile(fileContents);
-    } catch (err: any) {
+    } catch (err) {
       this.openGenericModal('Invalid File', err.message);
       this.newTournament();
       return;
@@ -323,7 +325,7 @@ export class TournamentManager {
         if (TournamentManager.isNameOfDateField(key)) return dayjs(value).toDate(); // must be ISO 8601 format
         return value;
       });
-    } catch (err: any) {
+    } catch {
       this.openGenericModal('Invalid File', 'This file does not contain valid JSON.');
     }
     return objFromFile;
@@ -353,8 +355,9 @@ export class TournamentManager {
     let refTargets: IRefTargetDict = {};
     try {
       refTargets = collectRefTargets(objectList);
-    } catch (err: any) {
+    } catch (err) {
       this.openGenericModal('Invalid File', err.message);
+      return null;
     }
 
     const parser = new FileParser(refTargets);
@@ -365,8 +368,12 @@ export class TournamentManager {
       } else {
         loadedTournament = parser.parseTournament(tournamentObj);
       }
-    } catch (err: any) {
+    } catch (err) {
       this.openGenericModal('Invalid File', err.message);
+    }
+
+    if (parser.warnings.length > 0) {
+      this.openGenericModal('File Opened with Warnings', parser.warnings.join('\n\n'));
     }
 
     return loadedTournament;
@@ -379,12 +386,12 @@ export class TournamentManager {
     );
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   launchImportQbjTeamsWorkflow() {
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchImportQbjTeamWorkflow);
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   launchImportSqbsTeamsWorkflow() {
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchImportSqbsTeamWorkflow);
   }
@@ -399,10 +406,10 @@ export class TournamentManager {
       return;
     }
 
-    let refTargets: IRefTargetDict = {};
+    let refTargets: IRefTargetDict;
     try {
       refTargets = collectRefTargets(objectList);
-    } catch (err: any) {
+    } catch (err) {
       this.openGenericModal('Invalid File', err.message);
       return;
     }
@@ -426,17 +433,18 @@ export class TournamentManager {
       numTeamsImported += this.importSingleRegistrationObj(reg, parser);
     }
 
+    const warningsSuffix = parser.warnings.length > 0 ? `\n\n${parser.warnings.join('\n\n')}` : '';
     if (numTeamsImported === 0) {
       this.openGenericModal(
         'Team Import',
-        `No teams were imported because no new teams were found or the maximum number of teams was reached.`,
+        `No teams were imported because no new teams were found or the maximum number of teams was reached.${warningsSuffix}`,
       );
     } else {
       this.openGenericModal(
         'Team Import',
         `Imported ${numTeamsImported} teams.${
           maxTeamsReached ? ' Not all teams were imported because the maximum number teams was reached.' : ''
-        }`,
+        }${warningsSuffix}`,
       );
     }
     this.markFileDirty();
@@ -446,8 +454,8 @@ export class TournamentManager {
     let registrationFromFile;
     try {
       registrationFromFile = parser.parseRegistration(registration as IIndeterminateQbj);
-    } catch (err: any) {
-      // TODO: track errors?
+    } catch (err) {
+      parser.warnings.push((err as Error).message);
       return 0;
     }
     if (!registrationFromFile) return 0;
@@ -482,7 +490,7 @@ export class TournamentManager {
     let registrationList;
     try {
       registrationList = parseTeamsFromSqbsFile(fileContents);
-    } catch (err: any) {
+    } catch (err) {
       this.openGenericModal('SQBS Roster Import', `Import failed: ${err.message}`);
       return;
     }
@@ -593,10 +601,10 @@ export class TournamentManager {
       return importResults;
     }
 
-    let refTargets: IRefTargetDict = {};
+    let refTargets: IRefTargetDict;
     try {
       refTargets = collectRefTargets(objectList);
-    } catch (err: any) {
+    } catch (err) {
       wholeFileFailureResult.markFatal(err.message);
       importResults.push(wholeFileFailureResult);
       return importResults;
@@ -643,7 +651,7 @@ export class TournamentManager {
     let yfMatch;
     try {
       yfMatch = parser.parseMatch(match as IIndeterminateQbj);
-    } catch (err: any) {
+    } catch (err) {
       importResult.markFatal(err.message);
       return;
     }
@@ -785,23 +793,28 @@ export class TournamentManager {
    * @param filePathStart The full file path, minus the identifier of the specific page (e.g. _standing.html), if saving externally. E.g. C:\mydata\mystatreport.
    * If saving to the in-app stat report, should be undefined
    */
-  generateHtmlReport(filePathStart?: string) {
+  async generateHtmlReport(filePathStart?: string) {
     let filePrefix;
     if (filePathStart) filePrefix = getFileNameFromPath(filePathStart);
 
     this.tournament.setHtmlFilePrefix(filePrefix);
 
     this.tournament.compileStats(true);
+    const [standings, individuals, scoreboard, teamDetails, playerDetails, roundReport] = await Promise.all([
+      this.tournament.makeHtmlStandings(),
+      this.tournament.makeHtmlIndividuals(),
+      this.tournament.makeHtmlScoreboard(),
+      this.tournament.makeHtmlTeamDetail(),
+      this.tournament.makeHtmlPlayerDetail(),
+      this.tournament.makeHtmlRoundReport(),
+    ]);
     const reports: StatReportHtmlPage[] = [
-      { fileName: StatReportFileNames[StatReportPages.Standings], contents: this.tournament.makeHtmlStandings() },
-      { fileName: StatReportFileNames[StatReportPages.Individuals], contents: this.tournament.makeHtmlIndividuals() },
-      { fileName: StatReportFileNames[StatReportPages.Scoreboard], contents: this.tournament.makeHtmlScoreboard() },
-      { fileName: StatReportFileNames[StatReportPages.TeamDetails], contents: this.tournament.makeHtmlTeamDetail() },
-      {
-        fileName: StatReportFileNames[StatReportPages.PlayerDetails],
-        contents: this.tournament.makeHtmlPlayerDetail(),
-      },
-      { fileName: StatReportFileNames[StatReportPages.RoundReport], contents: this.tournament.makeHtmlRoundReport() },
+      { fileName: StatReportFileNames[StatReportPages.Standings], contents: standings },
+      { fileName: StatReportFileNames[StatReportPages.Individuals], contents: individuals },
+      { fileName: StatReportFileNames[StatReportPages.Scoreboard], contents: scoreboard },
+      { fileName: StatReportFileNames[StatReportPages.TeamDetails], contents: teamDetails },
+      { fileName: StatReportFileNames[StatReportPages.PlayerDetails], contents: playerDetails },
+      { fileName: StatReportFileNames[StatReportPages.RoundReport], contents: roundReport },
     ];
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.WriteStatReports, reports, filePathStart);
   }
@@ -1565,6 +1578,7 @@ export class TournamentManager {
       setTimeout(() => {
         this.newReleaseAlert(true);
       }, 3000);
+      return;
     }
 
     if (versionLt(this.appVersion, this.latestAvailVersion)) {
@@ -1576,12 +1590,12 @@ export class TournamentManager {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   launchStatReportInBrowserWindow() {
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchStatReportInBrowser);
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   launchWebPageInBrowserWindow(url: string) {
     window.electron.ipcRenderer.sendMessage(IpcRendToMain.LaunchExternalWebPage, url);
   }
@@ -1596,19 +1610,19 @@ class NullTournamentManager extends TournamentManager {
     this.tournament.name = 'NullTournamentManager';
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   addIpcListeners(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   protected setWindowTitle(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   requestAppVersion(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   requestBackupFile(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   checkForNewVersion(): void {}
 }
 

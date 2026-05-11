@@ -1,5 +1,4 @@
-/* eslint-disable react/require-default-props */
-import { useContext, useState, useEffect, useMemo, forwardRef, useRef } from 'react';
+import { useContext, useState, useEffect, useMemo, forwardRef, useRef, type SyntheticEvent } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import {
   Dialog,
@@ -70,7 +69,7 @@ function MatchEditDialogCore() {
   const tournManager = useContext(TournamentContext);
   const modalManager = useContext(MatchEditModalContext);
   const [isOpen] = useSubscription(modalManager.modalIsOpen);
-  const tuhTotFieldRef = useRef<HTMLElement>(null);
+  const tuhTotFieldRef = useRef<HTMLInputElement>(null);
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const saveAndNewButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -225,7 +224,7 @@ function RoundField() {
 
   return (
     <YfNumericField
-      inputProps={{ min: 1 }}
+      slotProps={{ htmlInput: { min: 1 } }}
       label="Round"
       fullWidth
       variant="outlined"
@@ -254,7 +253,7 @@ function MainPhaseField() {
       fullWidth
       variant="outlined"
       size="small"
-      inputProps={{ readOnly: true }}
+      slotProps={{ htmlInput: { readOnly: true } }}
       helperText={' '}
       value={phaseName}
     />
@@ -263,8 +262,16 @@ function MainPhaseField() {
 
 function CarryoverPhaseSelect() {
   const modalManager = useContext(MatchEditModalContext);
-  const [coPhases, setCoPhases] = useSubscription(modalManager.tempMatch.carryoverPhases.map((ph) => ph.name));
-  const [availablePhases] = useSubscription(modalManager.getAvailableCarryOverPhases());
+  const [coPhases, setCoPhases] = useState<string[]>(
+    () => modalManager.tempMatch.carryoverPhases.map((ph) => ph.name),
+  );
+  const availablePhases = modalManager.getAvailableCarryOverPhases();
+
+   
+  useEffect(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    setCoPhases(modalManager.tempMatch.carryoverPhases.map((ph) => ph.name));
+  }, [modalManager.modalIsOpen, modalManager.tempMatch.carryoverPhases]);
 
   const handleChange = (val: string[] | string) => {
     const phaseNames = typeof val === 'string' ? val.split(',') : val;
@@ -295,7 +302,7 @@ function CarryoverPhaseSelect() {
   );
 }
 
-const TuhTotalField = forwardRef((props: {}, ref: React.ForwardedRef<HTMLInputElement>) => {
+const TuhTotalField = forwardRef((props: Record<string, never>, ref: React.ForwardedRef<HTMLInputElement>) => {
   const modalManager = useContext(MatchEditModalContext);
   const tournManager = useContext(TournamentContext);
   const thisTournament = tournManager.tournament;
@@ -314,7 +321,7 @@ const TuhTotalField = forwardRef((props: {}, ref: React.ForwardedRef<HTMLInputEl
   return (
     <YfNumericField
       inputRef={ref}
-      inputProps={{ min: 1 }}
+      slotProps={{ htmlInput: { min: 1 } }}
       label="TU Read (incl. OT)"
       fullWidth
       variant="outlined"
@@ -360,8 +367,7 @@ function TeamSelect(props: ITeamSelectProps) {
 
   const allTeamNames = useMemo(
     () => thisTournament.getListOfAllTeams().map((tm) => tm.name),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [thisTournament, modalManager.modalIsOpen],
+    [thisTournament],
   );
 
   const options = [teamSelectNullOption].concat(allTeamNames);
@@ -372,7 +378,7 @@ function TeamSelect(props: ITeamSelectProps) {
       clearOnEscape
       autoSelect
       value={team}
-      onChange={(event: any, newValue: string | null) => {
+      onChange={(_event: SyntheticEvent, newValue: string | null) => {
         handleChange(newValue || '');
       }}
       inputValue={inputValue}
@@ -381,7 +387,6 @@ function TeamSelect(props: ITeamSelectProps) {
       isOptionEqualToValue={isOptionEqualToValue}
       renderInput={(params) => (
         <TextField
-          // eslint-disable-next-line react/jsx-props-no-spreading
           {...params}
           size="small"
           autoFocus={
@@ -409,8 +414,7 @@ function TeamScoreField(props: ITeamScoreProps) {
   const [valStatus] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam).totalScoreFieldValidation.status);
   const [valMsg] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam).totalScoreFieldValidation.message);
   const [forfeit] = useSubscription(modalManager.tempMatch.isForfeit());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const divisor = useMemo(() => thisTournament.scoringRules.totalDivisor, [modalManager.modalIsOpen]);
+  const divisor = thisTournament.scoringRules.totalDivisor;
 
   const handleBlur = () => {
     const valToUse = modalManager.setTeamScore(whichTeam, pts);
@@ -419,7 +423,7 @@ function TeamScoreField(props: ITeamScoreProps) {
 
   return (
     <YfNumericField
-      inputProps={{ step: divisor }}
+      slotProps={{ htmlInput: { step: divisor } }}
       label="Score"
       fullWidth
       variant="outlined"
@@ -559,7 +563,7 @@ function PlayerRow(props: IPlayerRowProps) {
       </Grid>
       <Grid size={{ xs: numColumns }}>
         <YfNumericField
-          inputProps={{ min: 0 }}
+          slotProps={{ htmlInput: { min: 0 } }}
           fullWidth
           variant="standard"
           size="small"
@@ -578,7 +582,7 @@ function PlayerRow(props: IPlayerRowProps) {
       ))}
       <Grid size={{ xs: numColumns }}>
         {/** Don't use the MUI disabled property, which makes the text gray and hard to read */}
-        <TextField fullWidth variant="standard" size="small" hiddenLabel inputProps={{ disabled: true }} value={pts} />
+        <TextField fullWidth variant="standard" size="small" hiddenLabel slotProps={{ htmlInput: { disabled: true } }} value={pts} />
       </Grid>
     </>
   );
@@ -613,7 +617,7 @@ function PlayerAnswerCountField(props: IPlayerAnswerCountFieldProps) {
   return (
     <Grid size={{ xs: numColumns }}>
       <YfNumericField
-        inputProps={{ min: 0 }}
+        slotProps={{ htmlInput: { min: 0 } }}
         fullWidth
         variant={outlinedStyle ? 'outlined' : 'standard'}
         size="small"
@@ -719,7 +723,7 @@ function BounceBackRow(props: IBounceBackRowProps) {
       </div>
       <YfNumericField
         sx={{ width: '6ch' }}
-        inputProps={{ min: 0, step: divisor }}
+        slotProps={{ htmlInput: { min: 0, step: divisor } }}
         fullWidth
         variant="standard"
         size="small"
@@ -770,7 +774,7 @@ function LightningRow(props: ILightningRowProps) {
       <div>&emsp;&nbsp;Lightning Round:&emsp;</div>
       <YfNumericField
         sx={{ width: '6ch' }}
-        inputProps={{ min: 0, step: divisor }}
+        slotProps={{ htmlInput: { min: 0, step: divisor } }}
         fullWidth
         variant="standard"
         size="small"
@@ -849,7 +853,7 @@ function OvertimeTuReadField() {
   return (
     <YfNumericField
       sx={{ top: '30px' }}
-      inputProps={{ min: 0 }}
+      slotProps={{ htmlInput: { min: 0 } }}
       label="TU Read"
       fullWidth
       variant="outlined"

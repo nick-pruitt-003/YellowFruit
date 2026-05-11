@@ -69,10 +69,10 @@ function PhaseEditDialogCore() {
       <DialogTitle>Edit Stage</DialogTitle>
       <DialogContent>
         <Grid container>
-          <Grid xs>
+          <Grid size="grow">
             <PhaseNameField />
           </Grid>
-          <Grid xs="auto">
+          <Grid size="auto">
             <Typography sx={{ marginTop: 2, paddingLeft: 1 }}>
               Type: {phaseType ? phaseTypeDisplayName[phaseType] : ''}
             </Typography>
@@ -142,7 +142,7 @@ function PhaseRoundFields() {
         <span style={{ padding: '0 10px' }}>Rounds</span>
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          inputProps={{ min: 1, max: 999 }}
+          slotProps={{ htmlInput: { min: 1, max: 999 } }}
           variant="outlined"
           size="small"
           value={firstRound}
@@ -155,7 +155,7 @@ function PhaseRoundFields() {
         <span style={{ padding: '0 10px' }}>to</span>
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          inputProps={{ min: 1, max: 999 }}
+          slotProps={{ htmlInput: { min: 1, max: 999 } }}
           variant="outlined"
           size="small"
           value={lastRound}
@@ -195,7 +195,7 @@ function PhaseConvertFields() {
 
   return (
     <Grid container sx={{ my: 1 }}>
-      <Grid xs={6}>
+      <Grid size={6}>
         {modalManager.canConvToFinals && (
           <FormGroup>
             <Tooltip
@@ -212,7 +212,7 @@ function PhaseConvertFields() {
           </FormGroup>
         )}
       </Grid>
-      <Grid xs={6}>
+      <Grid size={6}>
         {modalManager.canConvToTB && (
           <FormGroup>
             <Tooltip

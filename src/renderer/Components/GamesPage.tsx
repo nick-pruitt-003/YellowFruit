@@ -46,7 +46,7 @@ export default function GamesPage() {
       <Card sx={{ marginBottom: 2, '& .MuiCardContent-root': { paddingBottom: 2.1 } }}>
         <CardContent>
           <Grid container spacing={2}>
-            <Grid xs="auto">
+            <Grid size="auto">
               <ToggleButtonGroup
                 size="small"
                 color="primary"
@@ -64,7 +64,7 @@ export default function GamesPage() {
                 ))}
               </ToggleButtonGroup>
             </Grid>
-            <Grid xs>
+            <Grid size="grow">
               <Tooltip placement="top" title={`Import games from one file into multiple rounds (${CtrlOrCmd()}+M)`}>
                 <span>
                   <Button
@@ -81,7 +81,7 @@ export default function GamesPage() {
               </Tooltip>
             </Grid>
             {curView === 0 && (
-              <Grid xs={5}>
+              <Grid size={5}>
                 <TeamFilterField filterByTeam={setFilterTeam} />
               </Grid>
             )}
@@ -125,12 +125,11 @@ function TeamFilterField(props: ITeamFilterFieldProps) {
       clearOnEscape
       autoSelect
       value={filterTeam?.name ?? ''}
-      onChange={(event: any, newValue: string | null) => handleFilterChange(newValue)}
+      onChange={(_event: React.SyntheticEvent, newValue: string | null) => handleFilterChange(newValue)}
       inputValue={filterInputValue}
       onInputChange={(event, newVal) => setFilterInputValue(newVal)}
       options={filterOptions}
       isOptionEqualToValue={isOptionEqualToValue}
-      // eslint-disable-next-line react/jsx-props-no-spreading
       renderInput={(params) => <TextField {...params} size="small" label="Filter by team" />}
     />
   );
@@ -316,17 +315,21 @@ interface IPlaceholderMatchListProps {
 
 function PlaceholderMatchList(props: IPlaceholderMatchListProps) {
   const { listSize } = props;
+  const widths = useMemo(
+    () => Array.from({ length: listSize }, () => 15 + 35 * Math.random()),
+    [listSize],
+  );
+
   if (listSize === 0) return null;
 
-  const placeholders: React.JSX.Element[] = [];
-  for (let i = 1; i <= listSize; i++) {
-    const widthPct = 15 + 35 * Math.random();
-    placeholders.push(
-      <Skeleton key={i} variant="text" width={`${widthPct.toPrecision(2)}%`} sx={{ fontSize: '16pt' }} />,
-    );
-  }
-
-  return <Stack spacing={2}>{placeholders}</Stack>;
+  return (
+    <Stack spacing={2}>
+      {widths.map((widthPct, i) => (
+        // eslint-disable-next-line @eslint-react/no-array-index-key
+        <Skeleton key={i + 1} variant="text" width={`${widthPct.toPrecision(2)}%`} sx={{ fontSize: '16pt' }} />
+      ))}
+    </Stack>
+  );
 }
 
 interface IMatchListItemProps {
@@ -345,7 +348,7 @@ function MatchListItem(props: IMatchListItemProps) {
       sx={{ p: 1, '&:hover': { backgroundColor: 'ivory' } }}
       onDoubleClick={() => tournManager.openMatchEditModalExistingMatch(match, round)}
     >
-      <Grid xs={8}>
+      <Grid size={8}>
         <Box typography="h6">{match.getScoreString()}</Box>
         <Typography variant="body2">
           {match.carryoverPhases.length > 0 && `Carries over to: ${match.listCarryoverPhases()}`}
@@ -357,7 +360,7 @@ function MatchListItem(props: IMatchListItemProps) {
           </Typography>
         )}
       </Grid>
-      <Grid xs={2}>
+      <Grid size={2}>
         {validationStatus === ValidationStatuses.Error && (
           <Tooltip
             title={`This game has errors that prevent it from counting in the stat report: ${trunc(
@@ -374,7 +377,7 @@ function MatchListItem(props: IMatchListItemProps) {
           </Tooltip>
         )}
       </Grid>
-      <Grid xs={2}>
+      <Grid size={2}>
         <Box sx={{ float: 'right' }}>
           <Tooltip title="Edit game">
             <IconButton onClick={() => tournManager.openMatchEditModalExistingMatch(match, round)}>

@@ -1,8 +1,6 @@
 import { IQbjObject, IYftDataModelObject, IYftFileObject, ValidationStatuses } from './Interfaces';
-// eslint-disable-next-line import/no-cycle
 import { IQbjMatch, Match } from './Match';
 import { IQbjPacket, Packet } from './Packet';
-// eslint-disable-next-line import/no-cycle
 import { Phase } from './Phase';
 import { Player } from './Player';
 import { QbjTypeNames } from './QbjEnums';

@@ -1,10 +1,7 @@
-// eslint-disable-next-line import/no-cycle
 import { IQbjRound, Round } from './Round';
 import { IQbjObject, IYftDataModelObject, IYftFileObject } from './Interfaces';
-// eslint-disable-next-line import/no-cycle
 import { IQbjPool, Pool, setAutoAdvanceRules } from './Pool';
 import { QbjTypeNames } from './QbjEnums';
-// eslint-disable-next-line import/no-cycle
 import { Team } from './Team';
 import { makeQbjRefPointer } from './QbjUtils';
 import { Match } from './Match';

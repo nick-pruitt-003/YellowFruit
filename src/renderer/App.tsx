@@ -82,8 +82,7 @@ function TournamentEditor() {
     } else if (activePage === ApplicationPages.Teams && mgr.currentTeamsPageView === 2) {
       mgr.compileStats();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mgr, mgr.tournament]);
+  }, [mgr, mgr.tournament, activePage]);
 
   useHotkeys('alt+shift+right', () => {
     if (!mgr.anyModalOpen()) {
@@ -101,11 +100,6 @@ function TournamentEditor() {
   });
 
   const changePage = (page: ApplicationPages) => {
-    if (page === ApplicationPages.StatReport) {
-      mgr.generateHtmlReport();
-    } else if (page === ApplicationPages.Teams && mgr.currentTeamsPageView === 2) {
-      mgr.compileStats();
-    }
     setactivePage(page);
   };
 

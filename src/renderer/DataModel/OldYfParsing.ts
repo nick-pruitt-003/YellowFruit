@@ -204,7 +204,7 @@ function parseTeams(tourn: Tournament, oldYfTeams: IOldYfTeam[]) {
     newTeam.isJV = team.jrVarsity;
     newTeam.isUG = team.teamUGStatus;
     newTeam.isD2 = team.teamD2Status;
-    // eslint-disable-next-line guard-for-in
+     
     for (const playerName in team.roster) {
       const newPlayer = new Player(playerName);
       const demogs = team.roster[playerName];
@@ -236,7 +236,7 @@ function parsePhaseStructure(
   let prelimPhaseName = findPrelimPhase(oldYfGames);
   const newPhaseList: Phase[] = [];
   let phaseCode = 0;
-  // eslint-disable-next-line guard-for-in
+   
   for (const phaseName in oldYfPhases) {
     if (!prelimPhaseName) prelimPhaseName = phaseName;
 
@@ -302,7 +302,7 @@ function findMaxRoundNumber(oldYfGames: IOldYfGame[]) {
 }
 
 function parsePackets(tourn: Tournament, oldYfPackets: IOldYfPackets) {
-  // eslint-disable-next-line guard-for-in
+   
   for (const roundNo in oldYfPackets) {
     const yfRound = tourn.getRoundObjByNumber(parseInt(roundNo, 10));
     if (yfRound) yfRound.packet.name = oldYfPackets[roundNo];
@@ -353,7 +353,7 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
     leftMatchTeam.lightningPoints = g.lightningPts1;
     rightMatchTeam.lightningPoints = g.lightningPts2;
 
-    // eslint-disable-next-line guard-for-in
+     
     for (const playerName in g.players1) {
       const yfPlayer = leftTeam.findPlayerByName(playerName);
       if (!yfPlayer) continue;
@@ -367,7 +367,7 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
       yfMP.answerCounts.find((pac) => pac.answerType.value === 10)?.addToCount(playerLine.tens);
       yfMP.answerCounts.find((pac) => pac.answerType.value === -5)?.addToCount(playerLine.negs);
     }
-    // eslint-disable-next-line guard-for-in
+     
     for (const playerName in g.players2) {
       const yfPlayer = rightTeam.findPlayerByName(playerName);
       if (!yfPlayer) continue;
@@ -477,12 +477,12 @@ function oldYfConversions(
  * strings to arrays of objects with the year property
  * @param  loadTeams list of teams
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function teamConversion2x1x0(loadTeams: any) {
-  // eslint-disable-next-line guard-for-in
   for (const i in loadTeams) {
     const curTeam = loadTeams[i];
-    const rosterObj: any = {};
-    // eslint-disable-next-line guard-for-in
+    const rosterObj: Record<string, { year: string }> = {};
+     
     for (const j in curTeam.roster) {
       rosterObj[curTeam.roster[j]] = { year: '' };
     }
@@ -496,12 +496,12 @@ function teamConversion2x1x0(loadTeams: any) {
  * @param  loadTeams list of teams
  */
 function teamConversion2x2x0(loadTeams: IOldYfTeam[]) {
-  // eslint-disable-next-line guard-for-in
+   
   for (const i in loadTeams) {
     const curTeam = loadTeams[i];
     curTeam.teamUGStatus = false;
     curTeam.teamD2Status = false;
-    // eslint-disable-next-line guard-for-in
+     
     for (const player in curTeam.roster) {
       curTeam.roster[player].div2 = false;
       curTeam.roster[player].undergrad = false;
@@ -515,7 +515,7 @@ function teamConversion2x2x0(loadTeams: IOldYfTeam[]) {
  * @param  loadTeams list of teams
  */
 function teamConversion2x3x0(loadTeams: IOldYfTeam[]) {
-  // eslint-disable-next-line guard-for-in
+   
   for (const i in loadTeams) {
     const curTeam = loadTeams[i];
     curTeam.smallSchool = false;
@@ -528,7 +528,7 @@ function teamConversion2x3x0(loadTeams: IOldYfTeam[]) {
  * an array of phases
  * @param  settings (old) tournament settings object
  */
-function settingsConversion2x4x0(settings: any) {
+function settingsConversion2x4x0(settings: IOldYfTournamentSettings) {
   if (settings.defaultPhase === 'noPhase') {
     settings.defaultPhases = [];
   } else {
@@ -542,7 +542,7 @@ function settingsConversion2x4x0(settings: any) {
  * @param  games list of games
  */
 function gameConversion2x4x0(games: IOldYfGame[]) {
-  // eslint-disable-next-line guard-for-in
+   
   for (const i in games) {
     games[i].tiebreaker = false;
   }
@@ -553,7 +553,7 @@ function gameConversion2x4x0(games: IOldYfGame[]) {
  * booleans, converg negs setting from string to boolean, and set lightning round setting.
  * @param  settings settings object
  */
-function settingsConversion2x5x0(settings: any) {
+function settingsConversion2x5x0(settings: IOldYfTournamentSettings) {
   settings.bonusesBounce = settings.bonuses === 'yesBb';
   settings.bonuses = settings.bonuses !== 'none';
   settings.negs = settings.negs === 'yes';
@@ -564,8 +564,9 @@ function settingsConversion2x5x0(settings: any) {
  * conversion on games data structure (version 2.5.0). Add lightning round properties
  * @param  games list of games
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function gameConversion2x5x0(games: any) {
-  // eslint-disable-next-line guard-for-in
+   
   for (const i in games) {
     games[i].lightningPts1 = '';
     games[i].lightningPts2 = '';
@@ -576,7 +577,7 @@ function gameConversion2x5x0(games: any) {
  * Change numeric fields to be numbers
  * @param  games list of games
  */
-function gameConversion2x5x2(games: any) {
+function gameConversion2x5x2(games: IOldYfGame[]) {
   for (const g of games) {
     g.round = +g.round;
     g.tuhtot = +g.tuhtot;
@@ -594,7 +595,7 @@ function gameConversion2x5x2(games: any) {
     g.lightningPts1 = +g.lightningPts1;
     g.lightningPts2 = +g.lightningPts2;
 
-    // eslint-disable-next-line guard-for-in
+     
     for (const p in g.players1) {
       const line = g.players1[p];
       line.tuh = +line.tuh;
@@ -602,7 +603,7 @@ function gameConversion2x5x2(games: any) {
       line.tens = +line.tens;
       line.negs = +line.negs;
     }
-    // eslint-disable-next-line guard-for-in
+     
     for (const p in g.players2) {
       const line = g.players2[p];
       line.tuh = +line.tuh;
@@ -617,7 +618,7 @@ function gameConversion2x5x2(games: any) {
  * Add a new game property
  * @param  games list of games
  */
-function gameConversion3x0x0(games: any) {
+function gameConversion3x0x0(games: IOldYfGame[]) {
   for (const g of games) {
     g.validationMsg = '';
   }

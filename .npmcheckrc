@@ -1,0 +1,41 @@
+{
+  "depcheck": {
+    "ignoreMatches": [
+      "@electron/notarize",
+      "@octokit/types",
+      "@pmmmwh/react-refresh-webpack-plugin",
+      "@svgr/webpack",
+      "@swc/core",
+      "@teamsupercell/typings-for-css-modules-loader",
+      "@testing-library/react",
+      "browserslist-config-erb",
+      "chalk",
+      "core-js",
+      "cross-env",
+      "css-loader",
+      "css-minimizer-webpack-plugin",
+      "detect-port",
+      "electronmon",
+      "file-loader",
+      "html-webpack-plugin",
+      "identity-obj-proxy",
+      "mini-css-extract-plugin",
+      "npm-check-updates",
+      "prettier",
+      "react-refresh",
+      "rimraf",
+      "sass",
+      "sass-loader",
+      "style-loader",
+      "swc-loader",
+      "terser-webpack-plugin",
+      "ts-node",
+      "tsconfig-paths-webpack-plugin",
+      "url-loader",
+      "webpack-bundle-analyzer",
+      "webpack-cli",
+      "webpack-dev-server",
+      "webpack-merge"
+    ]
+  }
+}

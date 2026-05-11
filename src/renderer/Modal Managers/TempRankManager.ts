@@ -58,7 +58,7 @@ export default class TempRankManager {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   hasAnyErrors() {
     return !!this.rankError;
   }

@@ -208,7 +208,7 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
     if (nameIsRequired && this.name === '') {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = 'Name is required';
-    } else if (this.name.length > Player.nameMaxLength) {
+    } else if ([...this.name].length > Player.nameMaxLength) {
       this.nameValidation.status = ValidationStatuses.Error;
       this.nameValidation.message = `Maximum allowed length is ${Player.nameMaxLength} characters.`;
     } else {
@@ -222,7 +222,7 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
   }
 
   validateYearString() {
-    if (this.yearString.length > Player.yearStringMaxLength) {
+    if ([...this.yearString].length > Player.yearStringMaxLength) {
       this.yearStringValidation.status = ValidationStatuses.Error;
       this.yearStringValidation.message = `Maximum allowed length is ${Player.yearStringMaxLength} characters.`;
     } else if (this.yearString !== '' && this.year === undefined) {
@@ -276,6 +276,9 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
    */
   static parseNonNumericYear(text: string): number | null {
     const lcText = text.toLocaleLowerCase();
+    // "5Sr.", "5 Sr.", etc. = nth-year senior = post-senior (17), must check before the loop
+    // so parseInt doesn't consume the leading digit and return 5th grade
+    if (/^\d+\s*(sr|sen)\b/.test(lcText)) return 17;
     for (const yr in this.yearSearchStr) {
       if (this._startsWithAny(lcText, this.yearSearchStr[yr as unknown as keyof typeof this.yearSearchStr])) {
         const yrInt = parseInt(yr, 10);

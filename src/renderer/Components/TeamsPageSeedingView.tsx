@@ -1,4 +1,3 @@
-/* eslint-disable react/no-array-index-key */
 import Grid from '@mui/material/Grid';
 import { useContext, useState } from 'react';
 import {
@@ -34,16 +33,16 @@ export default function SeedingView() {
   return (
     <Grid container spacing={2}>
       {readOnly && (
-        <Grid xs={12}>
+        <Grid size={12}>
           <Alert variant="filled" severity="info" icon={<Lock fontSize="small" />}>
             Seeds are read-only
           </Alert>
         </Grid>
       )}
-      <Grid xs={12} sm={6} md={4}>
+      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
         {usingTemplate && <SeedList />}
       </Grid>
-      <Grid xs={12} sm={usingTemplate ? 6 : undefined} md={usingTemplate ? 8 : undefined}>
+      <Grid size={{ xs: 12, sm: usingTemplate ? 6 : undefined, md: usingTemplate ? 8 : undefined }}>
         <YfCard title="Pools">
           <PoolView />
         </YfCard>
@@ -61,7 +60,7 @@ function SeedList() {
 
   const listItems = seedList.map((tm, idx) => (
     <SeedListItem
-      key={idx + 1}
+      key={tm.id}
       team={tm}
       seedNo={idx + 1}
       canMoveUp={idx > 0 && !readOnly}
@@ -70,7 +69,7 @@ function SeedList() {
   ));
   if (expectedNumTeams !== null) {
     for (let i = seedList.length; i < expectedNumTeams || 0; i++) {
-      listItems.push(<SeedListItem key={i + 1} team={null} seedNo={i + 1} canMoveUp={false} canMoveDown={false} />);
+      listItems.push(<SeedListItem key={`placeholder-${i + 1}`} team={null} seedNo={i + 1} canMoveUp={false} canMoveDown={false} />);
     }
   }
 
@@ -165,14 +164,14 @@ function PoolView() {
   return (
     <Grid container spacing={2}>
       {phase.pools.map((pool) => (
-        <Grid key={pool.name} xs={12} md={6}>
+        <Grid key={pool.name} size={{ xs: 12, md: 6 }}>
           <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
             {usingTemplate ? <PoolViewSeedTable pool={pool} /> : <UnseededPoolTable pool={pool} />}
           </TableContainer>
         </Grid>
       ))}
       {!usingTemplate && unassignedTeams.length > 0 && (
-        <Grid xs={12}>
+        <Grid size={12}>
           <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
             <UnassignedTeamsList teamList={unassignedTeams} />
           </TableContainer>

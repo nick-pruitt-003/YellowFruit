@@ -233,7 +233,7 @@ function PhaseEditor(props: IPhaseEditorProps) {
   return (
     <Grid container spacing={2}>
       {wcRules.length > 0 && phase.pools.length > 1 && (
-        <Grid xs={12} sx={{ '& .MuiFormControlLabel-label': { typography: 'body2' }, '& .MuiRadio-root': { py: 0.5 } }}>
+        <Grid size={12} sx={{ '& .MuiFormControlLabel-label': { typography: 'body2' }, '& .MuiRadio-root': { py: 0.5 } }}>
           <FormControl>
             <FormLabel>Cross-Pool (Wild Card) Ranking Method</FormLabel>
             <RadioGroup
@@ -254,7 +254,7 @@ function PhaseEditor(props: IPhaseEditorProps) {
           </FormControl>
         </Grid>
       )}
-      <Grid xs={5}>
+      <Grid size={5}>
         <Box
           sx={{
             marginTop: 1,
@@ -304,20 +304,20 @@ function PhaseEditor(props: IPhaseEditorProps) {
           </List>
         </Box>
       </Grid>
-      <Grid xs={7}>
+      <Grid size={7}>
         <Typography sx={{ marginTop: 1 }} variant="subtitle2">
           {selectedPool?.name}
         </Typography>
         {selectedPool && <PoolDetail selectedPool={selectedPool} hasWildCardAdvancement={wcRules.length > 0} />}
       </Grid>
-      <Grid xs>
+      <Grid size="grow">
         {!usingTemplate && (
           <Button size="small" variant="outlined" startIcon={<Add />} onClick={() => tournManager.addPool(phase)}>
             Add Pool
           </Button>
         )}
       </Grid>
-      <Grid xs="auto">
+      <Grid size="auto">
         {canAddTB && (
           <LinkButton onClick={() => tournManager.addTiebreakerAfter(phase)}>
             <Add fontSize="small" />
@@ -405,8 +405,8 @@ function ScheduleZeroState() {
 
   return (
     <Grid container>
-      <Grid xs />
-      <Grid xs="auto">
+      <Grid size="grow" />
+      <Grid size="auto">
         <Box sx={{ py: 13 }}>
           <div>
             <Typography variant="body2" sx={{ marginBottom: 1 }}>
@@ -420,7 +420,7 @@ function ScheduleZeroState() {
           </div>
         </Box>
       </Grid>
-      <Grid xs />
+      <Grid size="grow" />
     </Grid>
   );
 }

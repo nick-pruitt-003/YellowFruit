@@ -1,4 +1,4 @@
-/* eslint-disable prefer-destructuring */
+ 
 import {
   Dialog,
   DialogTitle,
@@ -63,6 +63,7 @@ function TeamEditDialogCore() {
   const tempRegToEdit = modalManager.tempRegistration;
 
   const [regName, setRegName] = useState(tempRegToEdit.name);
+  // eslint-disable-next-line @eslint-react/set-state-in-effect
   useEffect(() => setRegName(tempRegToEdit.name), [tempRegToEdit.name, tempTeamToEdit.name]); // can't use useSubscription due to the unusual dependency
   const [teamLetter] = useSubscription(tempTeamToEdit.letter);
   const [numPlayers] = useSubscription(modalManager.tempTeam.players.length);
@@ -73,10 +74,9 @@ function TeamEditDialogCore() {
     if (maxTeams === null) return false;
     if (numTeams >= maxTeams) return true;
     return tournManager.teamBeingModified === null && numTeams >= maxTeams - 1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [thisTournament, tournManager.teamBeingModified, modalManager.sessionID]);
+  }, [thisTournament, tournManager.teamBeingModified]);
 
-  const orgNameFieldRef = useRef<HTMLElement>(null);
+  const orgNameFieldRef = useRef<HTMLInputElement>(null);
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const saveAndNewButtonRef = useRef<HTMLButtonElement>(null);
   const autoFocusFirstPlayer = regName !== '' && teamLetter !== '' && numPlayers === 1;
@@ -159,6 +159,7 @@ const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameF
   const tempRegToEdit = modalManager.tempRegistration;
 
   const [regName, setRegName] = useState(tempRegToEdit.name);
+  // eslint-disable-next-line @eslint-react/set-state-in-effect
   useEffect(() => setRegName(tempRegToEdit.name), [tempRegToEdit.name, tempTeamToEdit.name]); // can't use useSubscription due to the unusual dependency
   const [teamLetter, setTeamLetter] = useSubscription(tempTeamToEdit.letter);
 
@@ -497,7 +498,7 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
 
 interface ITeamFormCheckBoxProps {
   label: string;
-  control: ReactElement<any, any>;
+  control: ReactElement;
   extraSpace: boolean;
 }
 

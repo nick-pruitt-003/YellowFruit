@@ -183,12 +183,15 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   /** Get a truncated name to use in match IDs */
   getLinkIdAbbrName() {
     const targetLength = 20;
-    let name = this.name.replaceAll(/\W/g, '');
-    if (name.length <= targetLength) return name;
+    // Normalize to NFC so precomposed and decomposed forms are equivalent.
+    // Keep Unicode letters, digits, and combining marks (ł, ó, ę, combining accents, etc.).
+    // Use Array.from so slicing respects code points, not UTF-16 code units.
+    const name = Array.from(this.name.normalize('NFC').replace(/[^\p{L}\p{N}\p{M}]/gu, ''));
+    if (name.length <= targetLength) return name.join('');
 
-    let letter = this.letter.replaceAll(/\W/g, '');
-    if (letter === '' || letter.length > 10) return name.substring(0, targetLength);
-    return `${name.substring(0, targetLength - letter.length)}${letter}`;
+    const letter = Array.from(this.letter.normalize('NFC').replace(/[^\p{L}\p{N}\p{M}]/gu, ''));
+    if (letter.length === 0 || letter.length > 10) return name.slice(0, targetLength).join('');
+    return `${name.slice(0, targetLength - letter.length).join('')}${letter.join('')}`;
   }
 
   removeNullPlayers() {
@@ -240,7 +243,7 @@ export class Team implements IQbjTeam, IYftDataModelObject {
   }
 
   validateLetter() {
-    if (this.letter.length > Team.maxLetterLength) {
+    if ([...this.letter].length > Team.maxLetterLength) {
       this.letterValidation.status = ValidationStatuses.Error;
       this.letterValidation.message = `Maximum allowed length is ${Team.maxLetterLength} characters.`;
     } else if (this.letter.trim().includes(' ')) {

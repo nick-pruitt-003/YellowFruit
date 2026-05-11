@@ -1,7 +1,5 @@
 import { sumReduce, versionLt } from '../Utils/GeneralUtils';
-// eslint-disable-next-line import/no-cycle
 import { NullDate, NullObjects } from '../Utils/UtilTypes';
-// eslint-disable-next-line import/no-cycle
 import type HtmlReportGenerator from './HTMLReports';
 import { IQbjObject, IQbjRefPointer, IYftDataModelObject, IYftFileObject } from './Interfaces';
 import { Match } from './Match';

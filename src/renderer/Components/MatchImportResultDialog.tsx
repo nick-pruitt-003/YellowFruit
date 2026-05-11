@@ -163,9 +163,8 @@ function ResultTable(props: IResultTableProps) {
     <TableContainer sx={{ border: 1, borderRadius: 1, borderColor: 'lightgray' }}>
       <Table size="small">
         <TableBody>
-          {resultList.map((rslt, idx) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <ResultTableRow key={idx} result={rslt} showRoundCol={showRoundCol} />
+          {resultList.map((rslt) => (
+            <ResultTableRow key={rslt.filePath} result={rslt} showRoundCol={showRoundCol} />
           ))}
         </TableBody>
       </Table>

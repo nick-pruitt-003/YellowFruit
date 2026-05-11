@@ -78,7 +78,7 @@ export function teamGetNameAndLetter(rawName: string): [string, string] {
 }
 
 /** Is this a normal team designator? (A, B, C, etc.) */
-export function isNormalTeamLetter(letter: string) {
+function isNormalTeamLetter(letter: string) {
   if (letter.length !== 1) return false;
   const ascii = letter.charCodeAt(0);
   return ascii >= unicodeA && ascii <= unicodeZ;

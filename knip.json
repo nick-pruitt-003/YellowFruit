@@ -1,0 +1,38 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "tags": [
+    "-lintignore"
+  ],
+  "entry": [
+    "src/main/main.ts",
+    "src/main/preload.ts",
+    "src/renderer/index.tsx"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}"
+  ],
+  "webpack": false,
+  "ignoreDependencies": [
+    "@electron/notarize",
+    "@octokit/types",
+    "@pmmmwh/react-refresh-webpack-plugin",
+    "@svgr/webpack",
+    "@swc/core",
+    "@teamsupercell/typings-for-css-modules-loader",
+    "@testing-library/react",
+    "browserslist-config-erb",
+    "core-js",
+    "css-loader",
+    "file-loader",
+    "identity-obj-proxy",
+    "npm-check-updates",
+    "prettier",
+    "react-refresh",
+    "sass-loader",
+    "style-loader",
+    "swc-loader",
+    "ts-node",
+    "tsconfig-paths-webpack-plugin",
+    "url-loader"
+  ]
+}

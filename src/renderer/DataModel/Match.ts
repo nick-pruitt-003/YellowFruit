@@ -4,7 +4,6 @@
  * https://schema.quizbowl.technology/match
  */
 
-// eslint-disable-next-line import/no-cycle
 import { IQbjPhase, Phase } from './Phase';
 import { IQbjObject, IQbjRefPointer, IYftDataModelObject, IYftFileObject, ValidationStatuses } from './Interfaces';
 import { MatchTeam, IQbjMatchTeam } from './MatchTeam';
@@ -15,7 +14,6 @@ import MatchValidationMessage, {
   MatchValidationCollection,
   MatchValidationType,
 } from './MatchValidationMessage';
-// eslint-disable-next-line import/no-cycle
 import { LeftOrRight, wlt } from '../Utils/UtilTypes';
 import AnswerType from './AnswerType';
 import { ScoringRules } from './ScoringRules';
@@ -26,8 +24,6 @@ import { IQbjMatchQuestion, MatchQuestion } from './MatchQuestion';
 export enum StatsValidity {
   /** A normal game with normal stats */
   valid,
-  /** A game with a final score, but the player-specific stats should be ignored */
-  noIndividuals,
   /** A game that is invalid and shouldn't be used in the standings at all */
   omit,
 }

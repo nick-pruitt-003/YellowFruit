@@ -36,7 +36,7 @@ export class PoolTeam implements IQbjPoolTeam, IYftDataModelObject {
     this.team = team;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   toFileObject(qbjOnly = false, isTopLevel = false, isReferenced = false): IQbjPoolTeam {
     const qbjObject: IQbjPoolTeam = {
       team: this.team.toRefPointer(),

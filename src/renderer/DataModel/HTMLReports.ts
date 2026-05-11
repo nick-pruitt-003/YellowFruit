@@ -1,5 +1,5 @@
-/* eslint-disable class-methods-use-this */
-/* eslint-disable no-useless-concat */
+ 
+ 
 import { StatReportPages, StatReportPageOrder, StatReportFileNames } from '../Enums';
 import { LeftOrRight, NullObjects } from '../Utils/UtilTypes';
 import { Match } from './Match';
@@ -9,7 +9,6 @@ import { Phase, PhaseTypes } from './Phase';
 import { Player } from './Player';
 import { Pool } from './Pool';
 import { Round } from './Round';
-// eslint-disable-next-line import/no-cycle
 import { StatTypes, columnName, columnTooltip } from './StatReportDataTypes';
 import {
   PhaseStandings,
@@ -21,7 +20,6 @@ import {
   TeamDetailMatchResult,
 } from './StatSummaries';
 import { Team } from './Team';
-// eslint-disable-next-line import/no-cycle
 import Tournament from './Tournament';
 
 export default class HtmlReportGenerator {
@@ -1199,7 +1197,9 @@ function playerDetailLinkId(player: Player, team: Team) {
 }
 
 function alphaOnly(str: string) {
-  return str.replace(/\W/g, '');
+  // Use Unicode property escapes so letters like ł, ó, ę, ñ are kept in anchor IDs.
+  // HTML5 allows any Unicode character in id attributes.
+  return str.replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 /** Header at the top of the html document */
@@ -1358,9 +1358,9 @@ function unorderedList(items: string[]) {
   return genericTag('ul', liTags.join('\n'));
 }
 
-function makeAttributeFromObj(obj: any, attrName: string) {
+function makeAttributeFromObj(obj: Record<string, unknown>, attrName: string) {
   const val = obj[attrName];
-  if (val === undefined) return '';
+  if (typeof val !== 'string') return '';
   return makeAttribute(attrName, val);
 }
 

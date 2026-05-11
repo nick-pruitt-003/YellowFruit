@@ -30,9 +30,13 @@ export default function SchedulePickerCard() {
   const [numTeamsRegistered] = useSubscription(tournManager.tournament.getNumberOfTeams());
   const readOnly = tournManager.tournament.hasMatchData;
 
+   
   useEffect(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setSize('');
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setSelectedTemplateName('');
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setPreviewedSchedule(null);
   }, [tournManager.tournament]);
 
@@ -44,12 +48,7 @@ export default function SchedulePickerCard() {
 
   const handleTemplateChange = (val: string) => {
     setSelectedTemplateName(val);
-    let newSched: StandardSchedule | null = null;
-    if (val === '') {
-      newSched = null;
-    } else {
-      newSched = getStdSchedule(val, size);
-    }
+    const newSched = val !== '' ? getStdSchedule(val, size) : null;
     setPreviewedSchedule(newSched);
   };
 

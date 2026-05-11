@@ -1,6 +1,6 @@
 // QBJ schema uses a different case for property names than the internal YF data structures do
 
-export function camelCaseToSnakeCase(obj: any) {
+export function camelCaseToSnakeCase(obj: Record<string, unknown>) {
   if (typeof obj !== 'object') return;
 
   obj.short_name = obj.shortName;
@@ -44,6 +44,7 @@ export function camelCaseToSnakeCase(obj: any) {
   obj.replacement_tossup_question_match_teams = obj.replacementTossupQuestionMatchTeams;
   obj.bonus_points = obj.bonusPoints;
   obj.bonus_bounceback_points = obj.bonusBouncebackPoints;
+  obj.lightning_points = obj.lightningPoints;
   obj.bonus_start_time = obj.bonusStartTime;
   obj.replacement_bonus = obj.replacementBonus;
   obj.buzz_position = obj.buzzPosition;
@@ -107,6 +108,7 @@ export function camelCaseToSnakeCase(obj: any) {
   delete obj.replacementTossupQuestionMatchTeams;
   delete obj.bonusPoints;
   delete obj.bonusBouncebackPoints;
+  delete obj.lightningPoints;
   delete obj.bonusStartTime;
   delete obj.replacementBonus;
   delete obj.buzzPosition;
@@ -130,11 +132,11 @@ export function camelCaseToSnakeCase(obj: any) {
   delete obj.categoryGroup;
 
   for (const prop in obj) {
-    if (typeof obj[prop] === 'object') camelCaseToSnakeCase(obj[prop]);
+    if (typeof obj[prop] === 'object') camelCaseToSnakeCase(obj[prop] as Record<string, unknown>);
   }
 }
 
-export function snakeCaseToCamelCase(obj: any) {
+export function snakeCaseToCamelCase(obj: Record<string, unknown>) {
   if (typeof obj !== 'object') return;
 
   obj.shortName = obj.short_name;
@@ -178,6 +180,7 @@ export function snakeCaseToCamelCase(obj: any) {
   obj.replacementTossupQuestionMatchTeams = obj.replacement_tossup_question_match_teams;
   obj.bonusPoints = obj.bonus_points;
   obj.bonusBouncebackPoints = obj.bonus_bounceback_points;
+  obj.lightningPoints = obj.lightning_points;
   obj.bonusStartTime = obj.bonus_start_time;
   obj.replacementBonus = obj.replacement_bonus;
   obj.buzzPosition = obj.buzz_position;
@@ -241,6 +244,7 @@ export function snakeCaseToCamelCase(obj: any) {
   delete obj.replacement_tossup_question_match_teams;
   delete obj.bonus_points;
   delete obj.bonus_bounceback_points;
+  delete obj.lightning_points;
   delete obj.bonus_start_time;
   delete obj.replacement_bonus;
   delete obj.buzz_position;
@@ -264,6 +268,6 @@ export function snakeCaseToCamelCase(obj: any) {
   delete obj.category_group;
 
   for (const prop in obj) {
-    if (typeof obj[prop] === 'object') snakeCaseToCamelCase(obj[prop]);
+    if (typeof obj[prop] === 'object') snakeCaseToCamelCase(obj[prop] as Record<string, unknown>);
   }
 }

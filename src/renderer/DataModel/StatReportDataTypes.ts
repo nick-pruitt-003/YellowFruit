@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-cycle
 import Tournament from './Tournament';
 
 export enum StatTypes {

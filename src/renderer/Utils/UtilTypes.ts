@@ -1,4 +1,3 @@
-/* eslint-disable import/no-cycle */
 import { Match } from '../DataModel/Match';
 import Registration from '../DataModel/Registration';
 import { Team } from '../DataModel/Team';
@@ -15,7 +14,7 @@ export class NullDate extends Date {
     return d.toString() === NullDate.nullStr;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   toString(): string {
     return NullDate.nullStr;
   }
