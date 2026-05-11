@@ -15,6 +15,13 @@ export default tseslint.config(
       '**/*.css.d.ts',
       '**/*.sass.d.ts',
       '**/*.scss.d.ts',
+      'logs',
+      '*.log',
+      'npm-debug.log.*',
+      'coverage',
+      '.eslintcache',
+      '.idea',
+      '.DS_Store',
     ],
   },
   js.configs.recommended,
@@ -33,6 +40,16 @@ export default tseslint.config(
         sourceType: 'module',
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    settings: {
+      'react-x': {
+        // Auto-detect React version from package.json instead of using the
+        // hardcoded default (19.2.4). Affects semantic analysis of React APIs.
+        version: 'detect',
+        // useSubscription returns [T, Dispatch<T>] just like useState, so
+        // register it so the analyzer can reason about state in components that use it.
+        additionalStateHooks: '/^useSubscription$/u',
       },
     },
     rules: {
@@ -66,6 +83,9 @@ export default tseslint.config(
       '@eslint-react/set-state-in-effect': 'warn',
       '@eslint-react/exhaustive-deps': 'warn',
       '@eslint-react/purity': 'warn',
+      // Type-aware: catches {count && <Foo/>} bugs when count could be 0.
+      // Accurate here because strictNullChecks is enabled in tsconfig.
+      '@eslint-react/no-leaked-conditional-rendering': 'warn',
 
       // ── Style ──────────────────────────────────────────────────────────
       'no-underscore-dangle': 'off',

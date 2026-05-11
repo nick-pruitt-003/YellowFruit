@@ -142,7 +142,7 @@ function PhaseRoundFields() {
         <span style={{ padding: '0 10px' }}>Rounds</span>
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          inputProps={{ min: 1, max: 999 }}
+          slotProps={{ htmlInput: { min: 1, max: 999 } }}
           variant="outlined"
           size="small"
           value={firstRound}
@@ -155,7 +155,7 @@ function PhaseRoundFields() {
         <span style={{ padding: '0 10px' }}>to</span>
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
-          inputProps={{ min: 1, max: 999 }}
+          slotProps={{ htmlInput: { min: 1, max: 999 } }}
           variant="outlined"
           size="small"
           value={lastRound}

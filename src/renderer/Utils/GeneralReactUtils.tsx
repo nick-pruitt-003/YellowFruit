@@ -52,7 +52,7 @@ interface ExpandButtonProps extends IconButtonProps {
 
 // from https://mui.com/material-ui/react-card/
 export const ExpandButton = styled((props: ExpandButtonProps) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { expand, ...other } = props;
   return <IconButton {...other} />;
 })(({ theme, expand }) => ({
@@ -91,21 +91,20 @@ export function CollapsibleArea(props: React.PropsWithChildren<ICollapsibleAreaP
   );
 }
 
-function numberInputOnWheelPreventChange(e: any) {
+function numberInputOnWheelPreventChange(e: React.WheelEvent<HTMLElement>) {
   // Prevent the input value change
-  e.target.blur();
+  (e.target as HTMLElement).blur();
 
   // Prevent the page/container scrolling
   e.stopPropagation();
 
   // Refocus immediately, on the next tick (after the current function is done)
-  setTimeout(() => e.target.focus(), 0);
+  setTimeout(() => (e.target as HTMLElement).focus(), 0);
 }
 
 /** A numeric field that stops the mouse wheel from changing it */
 export function YfNumericField(props: TextFieldProps) {
-  const { ...other } = props;
-  return <TextField type="number" onWheel={numberInputOnWheelPreventChange} {...other} />;
+  return <TextField type="number" onWheel={numberInputOnWheelPreventChange} {...props} />;
 }
 
 export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef: React.ForwardedRef<HTMLButtonElement>) => {

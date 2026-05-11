@@ -1,4 +1,5 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { app, BrowserWindow, IpcMainEvent, dialog, IpcMainInvokeEvent, shell } from 'electron';
 import fs from 'fs';
 import { IpcBidirectional, IpcMainToRend } from '../IPCChannels';
@@ -41,7 +42,7 @@ export function createDirectories() {
   }
   if (!fs.existsSync(curBackupFilePath)) {
     fs.writeFile(curBackupFilePath, '', { encoding: 'utf8' }, (err) => {
-      // eslint-disable-next-line no-console
+       
       if (err) console.log(err);
     });
   }
@@ -314,7 +315,7 @@ export function handleSaveBackup(event: IpcMainEvent, fileContents: string) {
   if (!window) return;
 
   fs.writeFile(curBackupFilePath, fileContents, { encoding: 'utf8' }, (err) => {
-    // eslint-disable-next-line no-console
+     
     if (err) console.log(err);
   });
 }
@@ -422,7 +423,7 @@ function promptForQbjGamesToImport(window: BrowserWindow) {
 }
 
 export function handlelaunchStatReportInBrowserWindow() {
-  shell.openExternal(path.resolve(inAppStatReportDirectory, 'standings.html'));
+  shell.openExternal(pathToFileURL(path.resolve(inAppStatReportDirectory, 'standings.html')).href);
 }
 
 export function handleLaunchExternalWebPage(event: IpcMainEvent, url: string) {

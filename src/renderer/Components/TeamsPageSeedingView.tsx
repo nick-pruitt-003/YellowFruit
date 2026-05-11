@@ -60,7 +60,7 @@ function SeedList() {
 
   const listItems = seedList.map((tm, idx) => (
     <SeedListItem
-      key={idx + 1}
+      key={tm.name}
       team={tm}
       seedNo={idx + 1}
       canMoveUp={idx > 0 && !readOnly}

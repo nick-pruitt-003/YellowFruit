@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
  */
 function useSubscription<T>(valFromDataModel: T): [T, React.Dispatch<T>] {
   const [val, setVal] = useState(valFromDataModel);
+  // eslint-disable-next-line @eslint-react/set-state-in-effect
   useEffect(() => setVal(valFromDataModel), [valFromDataModel]);
   return [val, setVal];
 }

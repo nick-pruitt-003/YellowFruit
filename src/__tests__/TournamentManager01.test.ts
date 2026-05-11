@@ -4,16 +4,16 @@ import { TournamentManager } from '../renderer/TournamentManager';
 import { NullDate } from '../renderer/Utils/UtilTypes';
 
 class TestTournamentManager extends TournamentManager {
-  // eslint-disable-next-line class-methods-use-this
+   
   addIpcListeners(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   protected setWindowTitle(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   requestAppVersion(): void {}
 
-  // eslint-disable-next-line class-methods-use-this
+   
   requestBackupFile(): void {}
 }
 

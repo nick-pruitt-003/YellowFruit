@@ -1,9 +1,10 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// All paths are derived from the project root (process.cwd()).
-// npm scripts always run from the project root, so this is reliable
-// and works in both CJS (ts-node) and ESM (webpack-cli native TS import) contexts.
-const rootPath = process.cwd();
+// Anchor to this file's location so rootPath is always the repo root,
+// regardless of which directory npm is using as CWD when it runs scripts
+// (e.g. release/app postinstall sets CWD to release/app, not the repo root).
+const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const erbPath = path.join(rootPath, '.erb');
 const erbNodeModulesPath = path.join(erbPath, 'node_modules');

@@ -24,8 +24,6 @@ import { IQbjMatchQuestion, MatchQuestion } from './MatchQuestion';
 export enum StatsValidity {
   /** A normal game with normal stats */
   valid,
-  /** A game with a final score, but the player-specific stats should be ignored */
-  noIndividuals,
   /** A game that is invalid and shouldn't be used in the standings at all */
   omit,
 }

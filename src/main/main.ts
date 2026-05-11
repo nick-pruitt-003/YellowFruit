@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 
 /**
  * This module executes inside of electron's main process. You can start

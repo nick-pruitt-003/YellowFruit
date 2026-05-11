@@ -82,7 +82,7 @@ function TournamentEditor() {
     } else if (activePage === ApplicationPages.Teams && mgr.currentTeamsPageView === 2) {
       mgr.compileStats();
     }
-  }, [mgr, mgr.tournament]);
+  }, [mgr, mgr.tournament, activePage]);
 
   useHotkeys('alt+shift+right', () => {
     if (!mgr.anyModalOpen()) {

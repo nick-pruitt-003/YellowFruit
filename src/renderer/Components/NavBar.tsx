@@ -94,7 +94,7 @@ function NavBar(props: INavBarProps) {
               >
                 {applicationPageOrder.map((page) => (
                   <MenuItem key={page} onClick={() => handlePageButtonClick(page)}>
-                    <Typography textAlign="center">{pageNames[page]}</Typography>
+                    <Typography sx={{ textAlign: 'center' }}>{pageNames[page]}</Typography>
                   </MenuItem>
                 ))}
               </Menu>
@@ -166,10 +166,13 @@ function HelpTextDialogContent(props: IHelpTextDialogContentProps) {
   const contents = getAppPageHelpText(page);
   if (!contents) return 'No help text';
 
+   
   return contents.map((sec, idx) => (
+    // eslint-disable-next-line @eslint-react/no-array-index-key
     <div key={idx}>
       {sec.header && <Typography variant="subtitle2">{sec.header}</Typography>}
       {sec.content.map((par, pidx) => (
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         <Typography key={pidx} variant="body2" sx={{ marginBottom: 2 }}>
           {par}
         </Typography>

@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { Delete, HelpOutline } from '@mui/icons-material';
+import { Delete, HelpOutlined } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
 import useSubscription from '../Utils/CustomHooks';
 import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
@@ -156,7 +156,7 @@ function NumberOfTeamsField() {
   return (
     <YfNumericField
       sx={{ verticalAlign: 'baseline', width: '10ch' }}
-      inputProps={{ min: Math.max(1, numTeamsInPool), max: 999 }}
+      slotProps={{ htmlInput: { min: Math.max(1, numTeamsInPool), max: 999 } }}
       variant="outlined"
       size="small"
       label="No. Teams"
@@ -219,7 +219,7 @@ function CarryoverField() {
           <>
             Carryover?
             <Tooltip sx={{ mx: 1, verticalAlign: 'text-bottom' }} title={carryoverFieldTooltip} placement="right">
-              <HelpOutline fontSize="small" />
+              <HelpOutlined fontSize="small" />
             </Tooltip>
           </>
         }

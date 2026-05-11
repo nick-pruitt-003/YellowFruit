@@ -125,7 +125,7 @@ function TeamFilterField(props: ITeamFilterFieldProps) {
       clearOnEscape
       autoSelect
       value={filterTeam?.name ?? ''}
-      onChange={(event: any, newValue: string | null) => handleFilterChange(newValue)}
+      onChange={(_event: React.SyntheticEvent, newValue: string | null) => handleFilterChange(newValue)}
       inputValue={filterInputValue}
       onInputChange={(event, newVal) => setFilterInputValue(newVal)}
       options={filterOptions}
@@ -315,17 +315,21 @@ interface IPlaceholderMatchListProps {
 
 function PlaceholderMatchList(props: IPlaceholderMatchListProps) {
   const { listSize } = props;
+  const widths = useMemo(
+    () => Array.from({ length: listSize }, () => 15 + 35 * Math.random()),
+    [listSize],
+  );
+
   if (listSize === 0) return null;
 
-  const placeholders: React.JSX.Element[] = [];
-  for (let i = 1; i <= listSize; i++) {
-    const widthPct = 15 + 35 * Math.random();
-    placeholders.push(
-      <Skeleton key={i} variant="text" width={`${widthPct.toPrecision(2)}%`} sx={{ fontSize: '16pt' }} />,
-    );
-  }
-
-  return <Stack spacing={2}>{placeholders}</Stack>;
+  return (
+    <Stack spacing={2}>
+      {widths.map((widthPct, i) => (
+        // eslint-disable-next-line @eslint-react/no-array-index-key
+        <Skeleton key={i + 1} variant="text" width={`${widthPct.toPrecision(2)}%`} sx={{ fontSize: '16pt' }} />
+      ))}
+    </Stack>
+  );
 }
 
 interface IMatchListItemProps {

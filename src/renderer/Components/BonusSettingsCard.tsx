@@ -191,7 +191,9 @@ export function AdvancedNumericRuleField(props: IAdvancedNumericRuleFieldProps) 
   const { label, required, value, onChange, onBlur, disabled, minValue, maxValue } = props;
   const [error, setError] = useState(false);
 
+   
   useEffect(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     if (!invalidInteger(value, minValue, maxValue)) setError(false);
   }, [value, minValue, maxValue]);
 
@@ -215,7 +217,7 @@ export function AdvancedNumericRuleField(props: IAdvancedNumericRuleFieldProps) 
         <YfNumericField
           sx={{ marginTop: 1, width: '8ch' }}
           size="small"
-          inputProps={{ min: 0 }}
+          slotProps={{ htmlInput: { min: 0 } }}
           disabled={disabled}
           error={error}
           value={value}

@@ -14,7 +14,7 @@ export class NullDate extends Date {
     return d.toString() === NullDate.nullStr;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   toString(): string {
     return NullDate.nullStr;
   }

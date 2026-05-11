@@ -1,5 +1,5 @@
-/* eslint-disable class-methods-use-this */
-/* eslint-disable no-useless-concat */
+ 
+ 
 import { StatReportPages, StatReportPageOrder, StatReportFileNames } from '../Enums';
 import { LeftOrRight, NullObjects } from '../Utils/UtilTypes';
 import { Match } from './Match';
@@ -1358,7 +1358,7 @@ function unorderedList(items: string[]) {
   return genericTag('ul', liTags.join('\n'));
 }
 
-function makeAttributeFromObj(obj: any, attrName: string) {
+function makeAttributeFromObj(obj: Record<string, unknown>, attrName: string) {
   const val = obj[attrName];
   if (val === undefined) return '';
   return makeAttribute(attrName, val);

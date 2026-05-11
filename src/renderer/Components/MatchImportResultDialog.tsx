@@ -164,6 +164,7 @@ function ResultTable(props: IResultTableProps) {
       <Table size="small">
         <TableBody>
           {resultList.map((rslt, idx) => (
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             <ResultTableRow key={idx} result={rslt} showRoundCol={showRoundCol} />
           ))}
         </TableBody>
