@@ -60,7 +60,7 @@ function SeedList() {
 
   const listItems = seedList.map((tm, idx) => (
     <SeedListItem
-      key={tm.name}
+      key={tm.id}
       team={tm}
       seedNo={idx + 1}
       canMoveUp={idx > 0 && !readOnly}
@@ -69,7 +69,7 @@ function SeedList() {
   ));
   if (expectedNumTeams !== null) {
     for (let i = seedList.length; i < expectedNumTeams || 0; i++) {
-      listItems.push(<SeedListItem key={i + 1} team={null} seedNo={i + 1} canMoveUp={false} canMoveDown={false} />);
+      listItems.push(<SeedListItem key={`placeholder-${i + 1}`} team={null} seedNo={i + 1} canMoveUp={false} canMoveDown={false} />);
     }
   }
 

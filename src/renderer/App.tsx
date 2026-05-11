@@ -100,11 +100,6 @@ function TournamentEditor() {
   });
 
   const changePage = (page: ApplicationPages) => {
-    if (page === ApplicationPages.StatReport) {
-      mgr.generateHtmlReport();
-    } else if (page === ApplicationPages.Teams && mgr.currentTeamsPageView === 2) {
-      mgr.compileStats();
-    }
     setactivePage(page);
   };
 

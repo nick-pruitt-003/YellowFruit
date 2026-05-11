@@ -357,6 +357,7 @@ export class TournamentManager {
       refTargets = collectRefTargets(objectList);
     } catch (err) {
       this.openGenericModal('Invalid File', err.message);
+      return null;
     }
 
     const parser = new FileParser(refTargets);

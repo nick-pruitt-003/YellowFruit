@@ -29,7 +29,6 @@
       "style-loader",
       "swc-loader",
       "terser-webpack-plugin",
-      "ts-loader",
       "ts-node",
       "tsconfig-paths-webpack-plugin",
       "url-loader",

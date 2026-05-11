@@ -423,11 +423,12 @@ function promptForQbjGamesToImport(window: BrowserWindow) {
 }
 
 export function handlelaunchStatReportInBrowserWindow() {
-  shell.openExternal(pathToFileURL(path.resolve(inAppStatReportDirectory, 'standings.html')).href);
+  const fileUrl = pathToFileURL(path.resolve(inAppStatReportDirectory, 'standings.html')).href;
+  shell.openExternal(fileUrl).catch((err) => console.error(`Failed to open stat report: ${fileUrl}`, err));
 }
 
 export function handleLaunchExternalWebPage(event: IpcMainEvent, url: string) {
-  shell.openExternal(url);
+  shell.openExternal(url).catch((err) => console.error(`Failed to open external URL: ${url}`, err));
 }
 
 export function launchHelpWindow(mainWindow: BrowserWindow) {

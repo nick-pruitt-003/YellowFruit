@@ -92,19 +92,27 @@ export function CollapsibleArea(props: React.PropsWithChildren<ICollapsibleAreaP
 }
 
 function numberInputOnWheelPreventChange(e: React.WheelEvent<HTMLElement>) {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  const input = e.target;
+
   // Prevent the input value change
-  (e.target as HTMLElement).blur();
+  input.blur();
 
   // Prevent the page/container scrolling
   e.stopPropagation();
+  e.preventDefault();
 
   // Refocus immediately, on the next tick (after the current function is done)
-  setTimeout(() => (e.target as HTMLElement).focus(), 0);
+  setTimeout(() => input.focus(), 0);
 }
 
 /** A numeric field that stops the mouse wheel from changing it */
-export function YfNumericField(props: TextFieldProps) {
-  return <TextField type="number" onWheel={numberInputOnWheelPreventChange} {...props} />;
+export function YfNumericField({ onWheel, ...rest }: TextFieldProps) {
+  const composedOnWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    numberInputOnWheelPreventChange(e);
+    onWheel?.(e);
+  };
+  return <TextField {...rest} type="number" onWheel={composedOnWheel} />;
 }
 
 export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef: React.ForwardedRef<HTMLButtonElement>) => {

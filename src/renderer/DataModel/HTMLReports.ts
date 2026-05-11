@@ -1360,7 +1360,7 @@ function unorderedList(items: string[]) {
 
 function makeAttributeFromObj(obj: Record<string, unknown>, attrName: string) {
   const val = obj[attrName];
-  if (val === undefined) return '';
+  if (typeof val !== 'string') return '';
   return makeAttribute(attrName, val);
 }
 

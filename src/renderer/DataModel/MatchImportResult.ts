@@ -83,14 +83,14 @@ class MatchImportResult {
    */
   static validateImportSetForTeamDups(results: MatchImportResult[]) {
     const sortedResults = results.slice().sort((a, b) => (a.round?.number ?? -1) - (b.round?.number ?? -1));
-    let curRound: Round | undefined = undefined;
+    let curRoundNumber: number | undefined = undefined;
     let teamsInRound: Team[] = [];
     for (const rslt of sortedResults) {
       const { match, round } = rslt;
       if (!match || !round) continue;
 
-      if (curRound !== round) {
-        curRound = round;
+      if (curRoundNumber !== round.number) {
+        curRoundNumber = round.number;
         teamsInRound = [];
       }
 
