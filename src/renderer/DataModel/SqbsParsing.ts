@@ -17,11 +17,14 @@ export default function parseTeamsFromSqbsFile(fileContents: string) {
   let curLine = 1;
   for (let i = 0; i < numTeams; i++) {
     // First line of team is the number of players
+    if (curLine >= fileLines.length) throw new Error(fileLineError('File is truncated: expected roster size', curLine));
     const numPlayers = parseRosterSize(fileLines, curLine++);
     // Second line is team name
+    if (curLine >= fileLines.length) throw new Error(fileLineError('File is truncated: expected team name', curLine));
     const registration = parseTeamName(fileLines, curLine++);
     // Subsequent lines are player names
     for (let j = 0; j < numPlayers; j++) {
+      if (curLine >= fileLines.length) throw new Error(fileLineError('File is truncated: expected player name', curLine));
       parsePlayerName(fileLines, curLine++, registration.teams[0]);
     }
 
