@@ -21,11 +21,19 @@ exports.default = async function notarizeMacos(context) {
 
   const appName = context.packager.appInfo.productFilename;
 
-  await notarize({
-    appBundleId: build.appId,
-    appPath: `${appOutDir}/${appName}.app`,
-    appleId: process.env.APPLE_ID,
-    appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
-    teamId: process.env.APPLE_TEAM_ID,
-  });
+  try {
+    await notarize({
+      appBundleId: build.appId,
+      appPath: `${appOutDir}/${appName}.app`,
+      appleId: process.env.APPLE_ID,
+      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID,
+    });
+  } catch (err) {
+    console.error(
+      `Notarization failed for appBundleId=${build.appId}, appPath=${appOutDir}/${appName}.app, APPLE_ID=${process.env.APPLE_ID}, APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID}`,
+    );
+    console.error(err);
+    throw err;
+  }
 };
