@@ -658,7 +658,6 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
 
   /** Add a new registration, and a new team that should be contained in that registration */
   addRegAndTeam(regToAdd: Registration, teamToAdd: Team) {
-    teamToAdd.removeNullPlayers(); // this should have happened already, but there seems to be some obscure race condition
     regToAdd.teams = [teamToAdd];
     this.addRegistration(regToAdd);
   }

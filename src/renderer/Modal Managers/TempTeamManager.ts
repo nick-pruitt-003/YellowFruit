@@ -71,9 +71,7 @@ export class TempTeamManager {
 
   /** Returns true if we can save the data */
   preSaveValidation() {
-    if (!this.teamHasPlayed) {
-      this.tempTeam.removeNullPlayers();
-    }
+    this.tempTeam.removeNullPlayers();
     this.tempRegistration.validateAll();
     this.tempTeam.validateAll();
     const errs = this.tempRegistration.getErrorMessages().concat(this.tempTeam.getErrorMessages());
@@ -184,7 +182,7 @@ export class TempTeamManager {
         existingTeam.copyFromTeam(this.tempTeam, 'restoreSource');
         this.tempRegistration.addTeam(existingTeam);
       } else {
-        this.tempTeam.removeNullPlayers(); // not entirely sure why we need to do this again
+        this.tempTeam.removeNullPlayers(); // final guard: saveRegistration can be called without preSaveValidation in some flows
         this.tempRegistration.addTeam(this.tempTeam);
       }
     }
