@@ -624,6 +624,7 @@ export class TournamentManager {
       const roundToUse = round ?? this.tournament.getRoundObjByNumber(Number.parseInt(matchAndRound.roundName, 10));
       if (roundToUse === undefined) {
         singleResult.markFatal(`Couldn't find a round in this tournament matching "${matchAndRound.roundName}"`);
+        importResults.push(singleResult);
         continue;
       }
       const phaseToUse = phase ?? this.tournament.findPhaseByRound(roundToUse);

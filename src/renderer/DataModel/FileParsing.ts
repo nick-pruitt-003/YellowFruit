@@ -1066,7 +1066,7 @@ export default class FileParser {
       if (!oneBuzz) continue;
 
       if (!allowedTeams.includes(oneBuzz.team)) {
-        throw new Error("A Match object contains a MatchQuestionBuzz for a team that doesn' play in the match");
+        throw new Error("A Match object contains a MatchQuestionBuzz for a team that doesn't play in the match");
       }
 
       yfMatchQuestionBuzzes.push(oneBuzz);
