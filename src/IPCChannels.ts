@@ -22,7 +22,7 @@ export enum IpcRendToMain {
   WebPageCrashed = 'WebPageCrashed',
   /** Tell main to prompt for a qbj file to import teams/rosters from */
   LaunchImportQbjTeamWorkflow = 'LaunchImportQbjTeamWorkflow',
-  /** Tell main to prompt for an SQBS filoe to import teams/rosters from */
+  /** Tell main to prompt for an SQBS file to import teams/rosters from */
   LaunchImportSqbsTeamWorkflow = 'LaunchImportSqbsTeamWorkflow',
   /** Tell main to launch the stat report in an external browser window */
   LaunchStatReportInBrowser = 'LaunchStatReportInBrowser',
