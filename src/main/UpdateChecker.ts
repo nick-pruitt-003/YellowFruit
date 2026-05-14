@@ -14,8 +14,11 @@ export async function checkForNewVersions(event: IpcMainEvent): Promise<void> {
     if (!tag) return;
 
     event.reply(IpcBidirectional.CheckForNewVersion, getVersionNumberFromTag(tag));
-  } catch {
-    // Network or API error — silently skip the update check
+  } catch (err) {
+    // Network or API error — silently skip the update check in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[UpdateChecker] Failed to check for new version:', err);
+    }
   }
 }
 
