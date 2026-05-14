@@ -352,7 +352,7 @@ export class TournamentManager {
       return null;
     }
 
-    let refTargets: IRefTargetDict = {};
+    let refTargets: IRefTargetDict;
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err) {
@@ -1569,14 +1569,16 @@ export class TournamentManager {
   }
 
   /** Alert the user if there is a newer version of the application is available */
-  newReleaseAlert(isRetry?: boolean) {
+  newReleaseAlert(retryCount: number = 0) {
+    const maxRetries = 5;
     if (this.latestAvailVersion === '') return;
 
     if (this.appVersion === '') {
-      if (isRetry) this.requestAppVersion();
+      if (retryCount === 0) this.requestAppVersion();
+      if (retryCount >= maxRetries) return;
 
       setTimeout(() => {
-        this.newReleaseAlert(true);
+        this.newReleaseAlert(retryCount + 1);
       }, 3000);
       return;
     }
