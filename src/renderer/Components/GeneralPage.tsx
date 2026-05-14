@@ -169,6 +169,7 @@ function PacketNameField(props: IPacketNameFieldProps) {
           variant="standard"
           size="small"
           fullWidth
+          spellCheck={false}
           value={packetName}
           onChange={(e) => setPacketName(e.target.value)}
           onBlur={() => tournManager.setPacketName(round, packetName)}
