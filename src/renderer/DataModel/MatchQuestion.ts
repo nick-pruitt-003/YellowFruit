@@ -79,10 +79,9 @@ export class MatchQuestion implements IQbjMatchQuestion, IYftDataModelObject {
     const [controlled, bounceback] = this.bonus
       ? this.bonus.totalPoints()
       : [this.bonusPoints ?? 0, this.bonusBouncebackPoints ?? 0];
-    if (tossupPoints > 0) {
-      return tossupPoints + controlled;
-    }
-    return tossupPoints + bounceback;
+    if (tossupPoints > 0) return tossupPoints + controlled;
+    if (tossupPoints === 0) return tossupPoints + bounceback;
+    return tossupPoints; // neg: no bounceback
   }
 
   /**

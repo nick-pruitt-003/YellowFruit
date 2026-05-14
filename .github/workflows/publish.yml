@@ -73,7 +73,7 @@ jobs:
           npm exec electron-builder -- --publish always --windows
 
       - name: Create zip file with unpacked code
-        uses: vimtor/action-zip@v1.2
+        uses: vimtor/action-zip@1379ea20d4c5705669ba81fd626dd01b1c738f26 # v1.2
         with:
           files: release/build/win-unpacked
           dest: win-unpacked.zip
@@ -81,7 +81,7 @@ jobs:
         # Electron-builder does this automatically for the packaged versions, but we need to do it ourselves for the zip file
       - name: Get most recent pre-release
         id: getDraftRelease
-        uses: cardinalby/git-get-release-action@v1
+        uses: cardinalby/git-get-release-action@cf4593dd18e51a1ecfbfb1c68abac9910a8b1e0c # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -89,7 +89,7 @@ jobs:
           draft: true
 
       - name: Upload zip file
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ steps.getDraftRelease.outputs.tag_name }}
           draft: true

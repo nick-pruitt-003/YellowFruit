@@ -42,16 +42,14 @@ function parseRosterSize(fileLines: string[], lineNumber: number): number {
   if (Number.isNaN(sectionSize)) {
     throw new Error(fileLineError('Failed to parse team size', lineNumber)); // Show 1-indexed number to user
   }
+  const teamName = fileLines[lineNumber + 1]?.trim() || '(unknown team)';
   if (sectionSize - 1 > Team.maxPlayers) {
     throw new Error(
-      fileLineError(
-        `Team ${fileLines[lineNumber + 1]} has more than ${Team.maxPlayers} players, which is not allowed.`,
-        lineNumber,
-      ),
+      fileLineError(`Team ${teamName} has more than ${Team.maxPlayers} players, which is not allowed.`, lineNumber),
     );
   }
   if (sectionSize - 1 < 1) {
-    throw new Error(fileLineError(`Team ${fileLines[lineNumber + 1]} has no players`, lineNumber));
+    throw new Error(fileLineError(`Team ${teamName} has no players`, lineNumber));
   }
   return sectionSize - 1;
 }
@@ -94,7 +92,7 @@ function parseYearFromPlayerName(rawName: string) {
   if (yearIdx === -1) {
     return [rawName, ''];
   }
-  // The player's fulle name, for some reason, is just "(12th grade)" or something
+  // The player's full name, for some reason, is just "(12th grade)" or something
   if (yearIdx === 0) {
     return [rawName, ''];
   }
