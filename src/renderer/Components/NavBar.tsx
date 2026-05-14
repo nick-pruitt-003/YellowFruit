@@ -142,7 +142,7 @@ interface IHelpTipsDialogProps {
 function HelpTipsDialog(props: IHelpTipsDialogProps) {
   const { page, isOpen, onClose } = props;
 
-  useHotkeys('alt+c', onClose, { enabled: isOpen });
+  useHotkeys('alt+c', onClose, { enabled: isOpen, enableOnFormTags: true });
 
   return (
     <Dialog fullWidth maxWidth="sm" open={isOpen} onClose={onClose}>
