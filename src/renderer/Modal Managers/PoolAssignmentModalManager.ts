@@ -65,6 +65,16 @@ export default class PoolAssignmentModalManager {
       delete this.selectedPool;
       return;
     }
-    this.selectedPool = this.phase?.findPoolByName(optionKey);
+    const lookedUpPool = this.phase?.findPoolByName(optionKey);
+    if (!lookedUpPool) {
+      // Lookup failure shouldn't happen — the dialog only offers names from
+      // phase.pools — but guard against it so we don't silently wipe a valid
+      // selection if a stale/unknown name slips through.
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`PoolAssignmentModalManager.setSelectedPool: no pool named "${optionKey}" in phase "${this.phase?.name}"; keeping previous selection.`);
+      }
+      return;
+    }
+    this.selectedPool = lookedUpPool;
   }
 }
