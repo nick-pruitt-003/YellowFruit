@@ -64,7 +64,10 @@ export default class SqbsGenerator {
   }
 
   private validateExportability() {
-    if (this.tournament.scoringRules.answerTypes.length > 4) {
+    // Check the filtered list (built earlier in generateFile) — buildAnswerTypeList
+    // drops 0-point buzzes since SQBS doesn't support them, so the raw count would
+    // falsely reject a 5-value format whose 5th value is a 0-point buzz.
+    if (this.answerTypeList.length > 4) {
       this.errorMessage = "SQBS doesn't support formats with more than 4 tossup point values";
       return;
     }
