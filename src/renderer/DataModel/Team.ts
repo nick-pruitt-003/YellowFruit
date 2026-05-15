@@ -173,11 +173,12 @@ export class Team implements IQbjTeam, IYftDataModelObject {
    * @returns Team name where the organization name is truncated. e.g. "Abcdef..." or "Abcdef... B"
    */
   getTruncatedName(length: number = 35) {
-    if (this.name.length <= length) return this.name;
+    if ([...this.name].length <= length) return this.name;
 
     if (this.letter === '') return trunc(this.name, length);
 
-    return `${trunc(this.name, length - this.letter.length - 1)} ${this.letter}`;
+    const letterLength = [...this.letter].length;
+    return `${trunc(this.name, length - letterLength - 1)} ${this.letter}`;
   }
 
   /** Get a truncated name to use in match IDs */

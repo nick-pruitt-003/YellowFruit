@@ -119,10 +119,12 @@ export function getFileNameFromPath(path: string) {
   return filePathSegments.pop();
 }
 
-/** Truncate a string to a desired length, appending an ellipsis if truncation was done */
+/** Truncate a string to a desired length (in Unicode code points, not UTF-16
+ *  code units), appending an ellipsis if truncation was done. */
 export function trunc(s: string, size: number) {
-  if (s.length <= size) return s;
-  return `${s.substring(0, size).trim()}...`;
+  const codePoints = Array.from(s);
+  if (codePoints.length <= size) return s;
+  return `${codePoints.slice(0, size).join('').trim()}...`;
 }
 
 /** Returns Ctrl or ⌘, for showing keyboard shortcuts */
