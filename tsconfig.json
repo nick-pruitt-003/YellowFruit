@@ -14,7 +14,8 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "allowJs": true,
-    "outDir": ".erb/dll"
+    "outDir": ".erb/dll",
+    "noEmit": true
   },
   "exclude": ["test", "release/build", "release/app/dist", ".erb/dll", ".erb/configs"]
 }
