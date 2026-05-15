@@ -17,7 +17,7 @@ export default function AboutYfDialog() {
   const [isOpen] = useSubscription(tournManager.aboutYfDialogOpen);
   const curVersion = tournManager.appVersion;
   const newestVersion = tournManager.latestAvailVersion;
-  const promptToUpdate = versionLt(curVersion, newestVersion);
+  const promptToUpdate = newestVersion !== '' && versionLt(curVersion, newestVersion);
 
   const handleClose = () => {
     tournManager.closeAboutYfDialog();
