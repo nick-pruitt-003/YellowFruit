@@ -164,7 +164,7 @@ interface IHelpTextDialogContentProps {
 function HelpTextDialogContent(props: IHelpTextDialogContentProps) {
   const { page } = props;
   const contents = getAppPageHelpText(page);
-  if (!contents) return 'No help text';
+  if (!contents) return <Typography variant="body2">No help text</Typography>;
 
    
   return contents.map((sec, idx) => (
