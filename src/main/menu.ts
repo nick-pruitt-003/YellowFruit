@@ -53,7 +53,9 @@ export default class MenuBuilder {
         },
         {
           label: 'Import Games Only',
-          accelerator: 'CmdOrCtrl+M',
+          // Shift+M to avoid colliding with macOS's standard Command+M (Minimize),
+          // which is also bound by the Window submenu in this file.
+          accelerator: 'CmdOrCtrl+Shift+M',
           click: () => {
             importGamesFromQbjMainLaunch(this.mainWindow);
           },
