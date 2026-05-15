@@ -1126,19 +1126,26 @@ export default class HtmlReportGenerator {
   private coloredPhaseCell(phases: Phase[]) {
     if (phases.length === 0) return textCell('');
 
+    // Lazy-init: callers outside getTeamDetailHtml (playerDetailTableRow,
+    // roundReportTableRow) don't call assignPhaseColors() themselves.
+    if (this.phaseColors.length === 0) this.assignPhaseColors();
+
     const colors: string[] = [];
     for (const ph of phases) {
       const color = this.phaseColors.find((obj) => obj.phase === ph)?.color ?? '';
       if (color !== '') colors.push(color);
 
-      if (color.length === 2) break;
+      // Stop once we have two colors — the cell only displays two stripes.
+      if (colors.length === 2) break;
     }
 
     const cellText = phases.map((ph) => ph.name).join(', ');
-    const style =
-      colors.length === 1
-        ? `background-color:${colors[0]}`
-        : `background-image: linear-gradient(to bottom right, ${colors[0]} 50%, ${colors[1]} 51%)`;
+    let style = '';
+    if (colors.length === 1) {
+      style = `background-color:${colors[0]}`;
+    } else if (colors.length >= 2) {
+      style = `background-image: linear-gradient(to bottom right, ${colors[0]} 50%, ${colors[1]} 51%)`;
+    }
 
     return genericTagWithAttributes('td', [makeAttribute('style', style)], cellText);
   }
