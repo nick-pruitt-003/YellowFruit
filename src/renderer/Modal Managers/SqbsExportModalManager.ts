@@ -25,11 +25,13 @@ export default class SqbsExportModalManager {
   openModal(phases: Phase[]) {
     this.availablePhases = phases.slice();
     this.modalIsOpen = true;
+    this.dataChangedReactCallback();
   }
 
   closeModal() {
     this.modalIsOpen = false;
     this.reset();
+    this.dataChangedReactCallback();
   }
 
   handleSelectedPhaseChange(phase: Phase, checked: boolean) {
