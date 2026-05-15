@@ -17,5 +17,13 @@
     "outDir": ".erb/dll",
     "noEmit": true
   },
-  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll", ".erb/configs"]
+  "exclude": [
+    "test",
+    "release/build",
+    "release/app/dist",
+    ".erb/dll",
+    ".erb/configs",
+    "eslint.config.mjs",
+    "vitest.config.ts"
+  ]
 }
