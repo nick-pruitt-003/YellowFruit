@@ -378,7 +378,8 @@ function writeSqbsFile(files: SqbsExportFile[], idx: number, window: BrowserWind
   const file = files[idx];
   if (!file) return;
 
-  const filePath = file.fileSuffix ? `${filePathStart.replace('.sqbs', '')}_${file.fileSuffix}.sqbs` : filePathStart;
+  const sanitizedSuffix = file.fileSuffix ? sanitizeFileSuffix(file.fileSuffix, idx) : '';
+  const filePath = sanitizedSuffix ? `${filePathStart.replace('.sqbs', '')}_${sanitizedSuffix}.sqbs` : filePathStart;
 
   fs.writeFile(filePath, file.contents, { encoding: 'utf-8' }, (err) => {
     if (err) {
@@ -392,6 +393,20 @@ function writeSqbsFile(files: SqbsExportFile[], idx: number, window: BrowserWind
       window.webContents.send(IpcMainToRend.MakeToast, toastMsg);
     }
   });
+}
+
+/** Make a phase name safe to interpolate into a filename segment.
+ *  Replaces path separators, Windows-reserved characters, control chars, and
+ *  trims leading/trailing dots/spaces (Windows rejects those too). Caps length
+ *  so a wildly long phase name can't produce an unopenable path. Falls back
+ *  to `phaseN` if sanitization leaves nothing usable. */
+function sanitizeFileSuffix(rawSuffix: string, idx: number): string {
+  const cleaned = rawSuffix
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
+    .slice(0, 60);
+  return cleaned || `phase${idx + 1}`;
 }
 
 export function importGamesFromQbjMainLaunch(window: BrowserWindow) {
