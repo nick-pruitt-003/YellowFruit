@@ -149,10 +149,20 @@ function ImportButtons(props: IImportButtonsProps) {
         <Paper>
           <ClickAwayListener onClickAway={handleDropDownClose}>
             <MenuList id="split-button-menu">
-              <MenuItem onClick={() => tournManager.launchImportQbjTeamsWorkflow()}>
+              <MenuItem
+                onClick={() => {
+                  setDropdownOpen(false);
+                  tournManager.launchImportQbjTeamsWorkflow();
+                }}
+              >
                 Import teams from QBJ/JSON (MODAQ) file
               </MenuItem>
-              <MenuItem onClick={() => tournManager.launchImportSqbsTeamsWorkflow()}>
+              <MenuItem
+                onClick={() => {
+                  setDropdownOpen(false);
+                  tournManager.launchImportSqbsTeamsWorkflow();
+                }}
+              >
                 Import teams from SQBS file
               </MenuItem>
             </MenuList>
