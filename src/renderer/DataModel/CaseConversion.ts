@@ -1,7 +1,7 @@
 // QBJ schema uses a different case for property names than the internal YF data structures do
 
 export function camelCaseToSnakeCase(obj: Record<string, unknown>) {
-  if (typeof obj !== 'object') return;
+  if (obj == null || typeof obj !== 'object') return;
 
   obj.short_name = obj.shortName;
   obj.tournament_site = obj.tournamentSite;
@@ -137,7 +137,7 @@ export function camelCaseToSnakeCase(obj: Record<string, unknown>) {
 }
 
 export function snakeCaseToCamelCase(obj: Record<string, unknown>) {
-  if (typeof obj !== 'object') return;
+  if (obj == null || typeof obj !== 'object') return;
 
   obj.shortName = obj.short_name;
   obj.tournamentSite = obj.tournament_site;
