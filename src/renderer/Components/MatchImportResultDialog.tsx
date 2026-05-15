@@ -239,7 +239,10 @@ function MessageList(props: IMessageListProps) {
   const { messages } = props;
 
   return messages.map((msg, idx) => (
-    <span key={msg}>
+    // Index suffixed so identical messages produce unique keys. List is
+    // render-only and never reorders, so the index suffix is safe here.
+    // eslint-disable-next-line @eslint-react/no-array-index-key
+    <span key={`${msg}-${idx}`}>
       {msg}
       {idx < messages.length - 1 && <br />}
     </span>
