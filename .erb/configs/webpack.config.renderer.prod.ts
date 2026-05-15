@@ -138,7 +138,6 @@ const configuration: webpack.Configuration = {
         removeComments: true,
       },
       isBrowser: false,
-      isDevelopment: false,
     }),
 
     new webpack.DefinePlugin({
