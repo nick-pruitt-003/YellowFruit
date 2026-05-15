@@ -145,7 +145,7 @@ function ImportButtons(props: IImportButtonsProps) {
           <ArrowDropDown />
         </Button>
       </ButtonGroup>
-      <Popper open={dropdownOpen} anchorEl={anchorRef.current}>
+      <Popper open={dropdownOpen} anchorEl={anchorRef.current} placement="bottom-end">
         <Paper>
           <ClickAwayListener onClickAway={handleDropDownClose}>
             <MenuList id="split-button-menu">
