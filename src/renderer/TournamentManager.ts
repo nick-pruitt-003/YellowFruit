@@ -651,7 +651,14 @@ export class TournamentManager {
       }
       const phaseToUse = phase ?? this.tournament.findPhaseByRound(roundToUse);
       if (phaseToUse === undefined) {
-        continue; // just ignore this match; this isn't plausible and I don't know how I would explain it to a user
+        // Shouldn't be reachable — a round always belongs to a phase — but
+        // surface it as a fatal instead of silently dropping the match so the
+        // user has some signal if the invariant is ever violated.
+        singleResult.markFatal(
+          `Couldn't find a phase for round "${matchAndRound.roundName}" — the file's round may not belong to any phase in this tournament.`,
+        );
+        importResults.push(singleResult);
+        continue;
       }
       this.importSingleMatchObj(matchAndRound.match, phaseToUse, roundToUse, singleResult, parser);
       importResults.push(singleResult);
