@@ -301,6 +301,6 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
   }
 
   static getPlayerNameFromId(id: string) {
-    return id.replace('Player_', '').replace(/_\d{4,}$/, '');
+    return id.replace(/^Player_/, '').replace(/_\d{4,}$/, '');
   }
 }
