@@ -98,7 +98,8 @@ export class MatchQuestion implements IQbjMatchQuestion, IYftDataModelObject {
    * @returns Error message if invalid; '' if valid
    */
   validate(rules: ScoringRules) {
-    const shouldHaveBonus = rules.useBonuses && (this.bonus || this.bonusPoints !== undefined);
+    const tossupConverted = this.buzzes.some((bz) => bz.result.value > 0);
+    const shouldHaveBonus = rules.useBonuses && tossupConverted;
     const shouldHaveBounceback = shouldHaveBonus && rules.bonusesBounceBack;
     const hasBonus = (this.bonus && this.bonus?.parts.length > 0) || this.bonusPoints !== undefined;
     const missingBouncebacks =
