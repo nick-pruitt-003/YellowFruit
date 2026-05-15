@@ -262,16 +262,24 @@ function MainPhaseField() {
 
 function CarryoverPhaseSelect() {
   const modalManager = useContext(MatchEditModalContext);
-  const [coPhases, setCoPhases] = useState<string[]>(
+  const carryoverPhaseNames = useMemo(
     () => modalManager.tempMatch.carryoverPhases.map((ph) => ph.name),
+    [modalManager.tempMatch.carryoverPhases],
   );
+  // Stable key derived from the actual phase-name content, so the effect below
+  // only re-runs when the names truly change — not when the array reference does.
+  const carryoverPhaseNamesKey = carryoverPhaseNames.join('|');
+  const [coPhases, setCoPhases] = useState<string[]>(() => carryoverPhaseNames);
   const availablePhases = modalManager.getAvailableCarryOverPhases();
 
-   
+
   useEffect(() => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setCoPhases(modalManager.tempMatch.carryoverPhases.map((ph) => ph.name));
-  }, [modalManager.modalIsOpen, modalManager.tempMatch.carryoverPhases]);
+    setCoPhases(carryoverPhaseNames);
+    // carryoverPhaseNames intentionally omitted from deps — carryoverPhaseNamesKey
+    // tracks its content and avoids reruns from identity-only changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalManager.modalIsOpen, carryoverPhaseNamesKey]);
 
   const handleChange = (val: string[] | string) => {
     const phaseNames = typeof val === 'string' ? val.split(',') : val;
