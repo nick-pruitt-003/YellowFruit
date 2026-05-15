@@ -177,7 +177,7 @@ function GenericToast() {
   const action =
     urlToLaunch === '' ? null : (
       <>
-        <Tooltip title="Download the lastest version from GitHub">
+        <Tooltip title="Download the latest version from GitHub">
           <IconButton color="inherit" size="small" onClick={handleLaunchUrl}>
             <Launch fontSize="small" />
           </IconButton>
