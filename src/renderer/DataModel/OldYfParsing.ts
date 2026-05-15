@@ -532,7 +532,7 @@ function settingsConversion2x4x0(settings: IOldYfTournamentSettings) {
   if (settings.defaultPhase === 'noPhase') {
     settings.defaultPhases = [];
   } else {
-    settings.defaultPhases = [settings.defaultPhase];
+    settings.defaultPhases = settings.defaultPhase ? [settings.defaultPhase] : [];
   }
   delete settings.defaultPhase;
 }
@@ -554,9 +554,9 @@ function gameConversion2x4x0(games: IOldYfGame[]) {
  * @param  settings settings object
  */
 function settingsConversion2x5x0(settings: IOldYfTournamentSettings) {
-  settings.bonusesBounce = settings.bonuses === 'yesBb';
-  settings.bonuses = settings.bonuses !== 'none';
-  settings.negs = settings.negs === 'yes';
+  settings.bonusesBounce = (settings.bonuses as unknown as string) === 'yesBb';
+  settings.bonuses = (settings.bonuses as unknown as string) !== 'none';
+  settings.negs = (settings.negs as unknown as string) === 'yes';
   settings.lightning = false;
 }
 
@@ -579,7 +579,7 @@ function gameConversion2x5x0(games: any) {
  */
 function gameConversion2x5x2(games: IOldYfGame[]) {
   for (const g of games) {
-    g.round = +g.round;
+    g.round = +(g.round ?? 0);
     g.tuhtot = +g.tuhtot;
     g.ottu = +g.ottu;
     g.score1 = +g.score1;

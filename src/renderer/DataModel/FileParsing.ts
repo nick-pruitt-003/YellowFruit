@@ -152,7 +152,7 @@ export default class FileParser {
 
     // NAQT's registration system exports a tournament_id extension field.
     // Use it to give more targeted guidance when teams have empty rosters.
-    if ((obj as Record<string, unknown>).tournament_id !== undefined) {
+    if ((obj as unknown as Record<string, unknown>).tournament_id !== undefined) {
       this.isNaqtFile = true;
     }
 
@@ -1281,6 +1281,7 @@ function removeYearFromPlayerName(nameRaw: string) {
 /** PlayerAnswerCounts in MODAQ use 'answer' when they should use 'answer_type' */
 function fixModaqAnswerType(pac: IQbjPlayerAnswerCount) {
   if (!pac.answerType) {
-    pac.answerType = (pac as IQbjPlayerAnswerCount & { answer?: string }).answer;
+    const legacyAnswer = (pac as IQbjPlayerAnswerCount & { answer?: string }).answer;
+    if (legacyAnswer !== undefined) pac.answerType = legacyAnswer as unknown as IQbjAnswerType;
   }
 }
