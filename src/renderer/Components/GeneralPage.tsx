@@ -162,7 +162,7 @@ function PacketNameField(props: IPacketNameFieldProps) {
   const [packetName, setPacketName] = useSubscription(packet.name);
 
   return (
-    <Grid container sx={{ p: 1 }}>
+    <Grid container spacing={2} sx={{ p: 1 }}>
       <Grid size={3}>{round.displayName()}</Grid>
       <Grid size={9}>
         <TextField
