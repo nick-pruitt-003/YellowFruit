@@ -278,7 +278,7 @@ function CarryoverPhaseSelect() {
     setCoPhases(carryoverPhaseNames);
     // carryoverPhaseNames intentionally omitted from deps — carryoverPhaseNamesKey
     // tracks its content and avoids reruns from identity-only changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [modalManager.modalIsOpen, carryoverPhaseNamesKey]);
 
   const handleChange = (val: string[] | string) => {

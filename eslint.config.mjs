@@ -10,6 +10,8 @@ export default tseslint.config(
       'release/app/dist',
       'release/build',
       '.erb/**',        // webpack build scripts — not production code
+      '.claude/**',     // claude-code worktrees mirror the repo; don't double-lint
+      'vitest.config.ts', // excluded from tsconfig; ESLint project service can't parse it
       '.eslintrc.js',   // legacy config file, ignored by flat config anyway
       '**/*.d.ts',
       '**/*.css.d.ts',
