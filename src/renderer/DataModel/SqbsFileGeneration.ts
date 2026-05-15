@@ -279,7 +279,7 @@ export default class SqbsGenerator {
   }
 
   private addOneMatch(match: Match, round: Round) {
-    if (match.leftTeam.forfeitLoss && match.rightTeam.forfeitLoss) {
+    if (isDoubleForfeit(match)) {
       return; // SQBS doesn't support double forfeits
     }
     const rules = this.tournament.scoringRules;
@@ -399,7 +399,11 @@ export default class SqbsGenerator {
   }
 
   private getTotalNumberOfGames() {
-    return sumReduce(this.matchListByRound.map((obj) => obj.matches.length));
+    // Match the filter that addOneMatch applies — SQBS doesn't represent
+    // double forfeits, so addOneMatch returns early for those. Without this
+    // filter the file header claims more games than addGameList actually
+    // emits, producing a malformed export.
+    return sumReduce(this.matchListByRound.map((obj) => obj.matches.filter((m) => !isDoubleForfeit(m)).length));
   }
 
   /** The ID used in the file to identify a team in a match */
@@ -426,6 +430,12 @@ export default class SqbsGenerator {
 /** SQBS can't store matches where more than 8 players on one team heard tossups */
 function matchTeamCantBeExported(matchTeam: MatchTeam) {
   return matchTeam.matchPlayers.filter((mp) => (mp.tossupsHeard ?? 0) > 0).length > 8;
+}
+
+/** SQBS has no representation for a match both teams forfeited — addOneMatch
+ *  skips these, so the header count must too. */
+function isDoubleForfeit(match: Match) {
+  return match.leftTeam.forfeitLoss && match.rightTeam.forfeitLoss;
 }
 
 /** The ID used in the file to identify a player in a match */
