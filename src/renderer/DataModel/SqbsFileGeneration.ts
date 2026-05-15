@@ -248,12 +248,26 @@ export default class SqbsGenerator {
   }
 
   private addPackets() {
-    this.addLine(this.getNumPackets());
-    for (const ph of this.phases) {
-      for (const rd of ph.rounds) {
-        this.addLine(rd.packet.name);
+    const rounds = this.getRoundsInExport();
+    this.addLine(rounds.length);
+    for (const rd of rounds) {
+      this.addLine(rd.packet.name);
+    }
+  }
+
+  /** Unique rounds actually referenced by the exported match list, in the order
+   *  they're first encountered. Includes carryover-source rounds, which would
+   *  otherwise be omitted by an iteration over this.phases alone. */
+  private getRoundsInExport(): Round[] {
+    const seen = new Set<Round>();
+    const rounds: Round[] = [];
+    for (const obj of this.matchListByRound) {
+      if (!seen.has(obj.round)) {
+        seen.add(obj.round);
+        rounds.push(obj.round);
       }
     }
+    return rounds;
   }
 
   /** Define all teams as not being exhibition teams */
@@ -377,9 +391,11 @@ export default class SqbsGenerator {
     return this.phases.length === 1 && this.phases[0].pools.length > 1;
   }
 
-  /** The number of packets we're defining. This is equal to the number of rounds we're exporting */
+  /** The number of packets we're defining. Equal to the number of unique
+   *  rounds actually referenced by the exported match list (which includes
+   *  carryover-source rounds, not just rounds in this.phases). */
   private getNumPackets() {
-    return sumReduce(this.phases.map((ph) => ph.rounds.length));
+    return this.getRoundsInExport().length;
   }
 
   private getTotalNumberOfGames() {
