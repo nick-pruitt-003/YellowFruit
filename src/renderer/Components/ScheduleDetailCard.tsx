@@ -345,7 +345,7 @@ function PoolDetail(props: IPoolDetailProps) {
   const { selectedPool, hasWildCardAdvancement } = props;
 
   return (
-    <Box typography="body2">
+    <Box sx={{ typography: 'body2' }}>
       <List dense>
         <ListItem disableGutters>{roundRobinDisplay(selectedPool)}</ListItem>
         {selectedPool.seeds.length > 0 && <ListItem disableGutters>Seeds {selectedPool.seeds.join(', ')}</ListItem>}

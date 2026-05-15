@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo, forwardRef, useRef, type SyntheticEvent } from 'react';
+import { useContext, useState, useEffect, useMemo, useRef, type SyntheticEvent, type Ref } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import {
   Dialog,
@@ -98,8 +98,8 @@ function MatchEditDialogCore() {
         <DialogTitle>Edit Game</DialogTitle>
         <DialogContent>
           <Box
-            fontSize={14}
             sx={{
+              fontSize: 14,
               minHeight: 475,
               '& .MuiFormHelperText-root': { whiteSpace: 'nowrap' },
             }}
@@ -310,7 +310,7 @@ function CarryoverPhaseSelect() {
   );
 }
 
-const TuhTotalField = forwardRef((props: Record<string, never>, ref: React.ForwardedRef<HTMLInputElement>) => {
+const TuhTotalField = ({ ref }: { ref?: Ref<HTMLInputElement> }) => {
   const modalManager = useContext(MatchEditModalContext);
   const tournManager = useContext(TournamentContext);
   const thisTournament = tournManager.tournament;
@@ -346,7 +346,7 @@ const TuhTotalField = forwardRef((props: Record<string, never>, ref: React.Forwa
       }}
     />
   );
-});
+};
 
 interface ITeamSelectProps {
   whichTeam: LeftOrRight;

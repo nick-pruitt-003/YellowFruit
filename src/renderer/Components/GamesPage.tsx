@@ -349,7 +349,7 @@ function MatchListItem(props: IMatchListItemProps) {
       onDoubleClick={() => tournManager.openMatchEditModalExistingMatch(match, round)}
     >
       <Grid size={8}>
-        <Box typography="h6">{match.getScoreString()}</Box>
+        <Box sx={{ typography: 'h6' }}>{match.getScoreString()}</Box>
         <Typography variant="body2">
           {match.carryoverPhases.length > 0 && `Carries over to: ${match.listCarryoverPhases()}`}
         </Typography>

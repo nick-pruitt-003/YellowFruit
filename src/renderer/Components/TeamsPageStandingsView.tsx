@@ -294,7 +294,7 @@ function TiebreakerOrFinalsInfo(props: ITiebreakerOrFinalsInfoProps) {
   return (
     <Box sx={{ marginTop: isFinals ? 0 : 1, mx: 2 }}>
       <Typography variant="subtitle2">{isFinals ? tbOrFinalsPhase.name : 'Tiebreakers'}</Typography>
-      <Box typography="body2">
+      <Box sx={{ typography: 'body2' }}>
         {matches.map((match) => (
           <div key={match.id}>
             {match.getWinnerLoserString()}{' '}

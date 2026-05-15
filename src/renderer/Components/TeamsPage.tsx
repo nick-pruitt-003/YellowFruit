@@ -220,7 +220,7 @@ function TeamListItem(props: ITeamListItemProps) {
       onDoubleClick={() => tournManager.openTeamEditModalExistingTeam(registration, team)}
     >
       <Grid size={9}>
-        <Box typography="h5">{team.name}</Box>
+        <Box sx={{ typography: 'h5' }}>{team.name}</Box>
         <Typography variant="body2">{teamInfoDisplay(registration, team)}</Typography>
       </Grid>
       <Grid size={3}>
