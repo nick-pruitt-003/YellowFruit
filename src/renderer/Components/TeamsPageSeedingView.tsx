@@ -328,7 +328,6 @@ function PoolViewTableRowUnseeded(props: IPoolViewTableRowUnseededProps) {
   const { team, index, pool, canMove } = props;
   const tournManager = useContext(TournamentContext);
   const dragData = unseededDragDataSerialize(pool, team);
-  const phase = tournManager.tournament.getPrelimPhase();
 
   const handleDrop = (droppedData: string) => {
     if (!pool) return;
@@ -342,7 +341,12 @@ function PoolViewTableRowUnseeded(props: IPoolViewTableRowUnseededProps) {
     tournManager.poolAssignSimpleSwitch();
   };
 
-  if (!phase) return null;
+  const handleEditClick = () => {
+    if (!team) return;
+    const phase = tournManager.tournament.getPrelimPhase();
+    if (!phase) return;
+    tournManager.openPoolAssignmentModal(team, phase, handleModalAccept, pool ?? undefined);
+  };
 
   return (
     <TableRow
@@ -363,10 +367,7 @@ function PoolViewTableRowUnseeded(props: IPoolViewTableRowUnseededProps) {
       <TableCell>
         {canMove && team && (
           <Tooltip title="Change pool assignment">
-            <IconButton
-              size="small"
-              onClick={() => tournManager.openPoolAssignmentModal(team, phase, handleModalAccept, pool ?? undefined)}
-            >
+            <IconButton size="small" onClick={handleEditClick}>
               <Edit />
             </IconButton>
           </Tooltip>
