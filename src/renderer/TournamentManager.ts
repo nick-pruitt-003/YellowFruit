@@ -284,7 +284,8 @@ export class TournamentManager {
 
   /** Import an entire (non-YFT) qbj file */
   private importQbjTournament(filePath: string, fileContents: string) {
-    this.newTournament();
+    // Don't reset the open tournament until we've successfully parsed the new
+    // one — otherwise a malformed file would silently wipe the user's data.
     const objFromFile = this.parseJSON(fileContents);
     if (!objFromFile) return;
 
@@ -293,6 +294,8 @@ export class TournamentManager {
     if (loadedTournament === null) {
       return;
     }
+
+    this.newTournament(); // safe to reset now: parse succeeded
     this.tournament = loadedTournament;
     this.modalManagersSetTournament();
     this.displayName = this.tournament.name || '';
