@@ -5,7 +5,7 @@ import { snakeCaseToCamelCase, camelCaseToSnakeCase } from '../renderer/DataMode
 test('yfToQbj01', () => {
   const tourn = new Tournament();
   tourn.questionSet = 'test question set';
-  const fileObj = tourn.toFileObject() as Record<string, unknown>;
+  const fileObj = tourn.toFileObject() as unknown as Record<string, unknown>;
   camelCaseToSnakeCase(fileObj);
 
   expect(fileObj.question_set).toBe(tourn.questionSet);
@@ -18,16 +18,16 @@ test('yfToQbj01', () => {
 test('yfToQbj02', () => {
   const tourn = new Tournament();
   tourn.questionSet = 'test question set';
-  const fileObj = tourn.toFileObject() as Record<string, unknown>;
+  const fileObj = tourn.toFileObject() as unknown as Record<string, unknown>;
   camelCaseToSnakeCase(fileObj);
 
-  expect(fileObj.scoring_rules.maximum_bonus_score).toBe(30);
+  expect((fileObj.scoring_rules as Record<string, unknown>).maximum_bonus_score).toBe(30);
 });
 
 test('yfToQbj01', () => {
   const tourn = new Tournament();
   tourn.questionSet = 'test question set';
-  const fileObj = tourn.toFileObject() as Record<string, unknown>;
+  const fileObj = tourn.toFileObject() as unknown as Record<string, unknown>;
   camelCaseToSnakeCase(fileObj);
 
   expect(fileObj.question_set).toBe(tourn.questionSet);
@@ -45,12 +45,12 @@ test('yfToQbj01', () => {
 test('yfToQbj02', () => {
   const tourn = new Tournament();
   tourn.questionSet = 'test question set';
-  const fileObj = tourn.toFileObject() as Record<string, unknown>;
+  const fileObj = tourn.toFileObject() as unknown as Record<string, unknown>;
   camelCaseToSnakeCase(fileObj);
 
-  expect(fileObj.scoring_rules.maximum_bonus_score).toBe(30);
+  expect((fileObj.scoring_rules as Record<string, unknown>).maximum_bonus_score).toBe(30);
 
   snakeCaseToCamelCase(fileObj);
 
-  expect(fileObj.scoringRules.maximumBonusScore).toBe(30);
+  expect((fileObj.scoringRules as Record<string, unknown>).maximumBonusScore).toBe(30);
 });

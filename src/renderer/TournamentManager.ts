@@ -262,7 +262,7 @@ export class TournamentManager {
     try {
       this.tournament = parseOldYfFile(fileContents);
     } catch (err) {
-      this.openGenericModal('Invalid File', err.message);
+      this.openGenericModal('Invalid File', (err as Error).message);
       this.newTournament();
       return;
     }
@@ -288,7 +288,7 @@ export class TournamentManager {
     const objFromFile = this.parseJSON(fileContents);
     if (!objFromFile) return;
 
-    snakeCaseToCamelCase(objFromFile);
+    snakeCaseToCamelCase(objFromFile as Record<string, unknown>);
     const loadedTournament = this.loadTournamentFromQbjObjects(objFromFile as IQbjWholeFile);
     if (loadedTournament === null) {
       return;
@@ -300,7 +300,7 @@ export class TournamentManager {
   }
 
   private parseYftFile(filePath: string, objFromFile: object, curYfVersion?: string) {
-    snakeCaseToCamelCase(objFromFile);
+    snakeCaseToCamelCase(objFromFile as Record<string, unknown>);
     const loadedTournament = this.loadTournamentFromQbjObjects(objFromFile as IQbjWholeFile, curYfVersion);
     if (loadedTournament === null) {
       return;
@@ -356,7 +356,7 @@ export class TournamentManager {
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err) {
-      this.openGenericModal('Invalid File', err.message);
+      this.openGenericModal('Invalid File', (err as Error).message);
       return null;
     }
 
@@ -369,7 +369,7 @@ export class TournamentManager {
         loadedTournament = parser.parseTournament(tournamentObj);
       }
     } catch (err) {
-      this.openGenericModal('Invalid File', err.message);
+      this.openGenericModal('Invalid File', (err as Error).message);
     }
 
     if (parser.warnings.length > 0) {
@@ -410,7 +410,7 @@ export class TournamentManager {
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err) {
-      this.openGenericModal('Invalid File', err.message);
+      this.openGenericModal('Invalid File', (err as Error).message);
       return;
     }
 
@@ -491,7 +491,7 @@ export class TournamentManager {
     try {
       registrationList = parseTeamsFromSqbsFile(fileContents);
     } catch (err) {
-      this.openGenericModal('SQBS Roster Import', `Import failed: ${err.message}`);
+      this.openGenericModal('SQBS Roster Import', `Import failed: ${(err as Error).message}`);
       return;
     }
     if (!registrationList) return;
@@ -559,7 +559,7 @@ export class TournamentManager {
       const objFromFile = this.parseJSON(fileContents);
       if (!objFromFile) return;
 
-      snakeCaseToCamelCase(objFromFile);
+      snakeCaseToCamelCase(objFromFile as Record<string, unknown>);
 
       if ((objFromFile as IQbjWholeFile).objects) {
         results = results.concat(this.importMatchesFromWholeQbj(objFromFile as IQbjWholeFile, filePath, phase, round));
@@ -605,7 +605,7 @@ export class TournamentManager {
     try {
       refTargets = collectRefTargets(objectList);
     } catch (err) {
-      wholeFileFailureResult.markFatal(err.message);
+      wholeFileFailureResult.markFatal((err as Error).message);
       importResults.push(wholeFileFailureResult);
       return importResults;
     }
@@ -653,7 +653,7 @@ export class TournamentManager {
     try {
       yfMatch = parser.parseMatch(match as IIndeterminateQbj);
     } catch (err) {
-      importResult.markFatal(err.message);
+      importResult.markFatal((err as Error).message);
       return;
     }
     if (yfMatch) {
@@ -757,7 +757,7 @@ export class TournamentManager {
 
   private generateWholeFileObj(qbjOnly: boolean = false) {
     const wholeFileObj: IQbjWholeFile = { version: '2.1.1', objects: [this.tournament.toFileObject(qbjOnly, true)] };
-    camelCaseToSnakeCase(wholeFileObj);
+    camelCaseToSnakeCase(wholeFileObj as unknown as Record<string, unknown>);
     return wholeFileObj;
   }
 
