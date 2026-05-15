@@ -556,8 +556,27 @@ export class TournamentManager {
     let results: MatchImportResult[] = [];
     for (const oneFile of fileAry) {
       const { filePath, fileContents } = oneFile;
-      const objFromFile = this.parseJSON(fileContents);
-      if (!objFromFile) return;
+      // Parse inline rather than via this.parseJSON() so a single bad file
+      // doesn't abort the whole import. Record it as a fatal result and move on
+      // — the import modal will surface failed and successful files together.
+      let objFromFile: object | null;
+      try {
+        objFromFile = JSON.parse(fileContents, (key, value) => {
+          if (TournamentManager.isNameOfDateField(key)) return dayjs(value).toDate();
+          return value;
+        });
+      } catch (err) {
+        const failResult = new MatchImportResult(filePath);
+        failResult.markFatal(`Failed to parse file: ${(err as Error).message}`);
+        results.push(failResult);
+        continue;
+      }
+      if (!objFromFile) {
+        const failResult = new MatchImportResult(filePath);
+        failResult.markFatal('File is empty or does not contain a JSON object.');
+        results.push(failResult);
+        continue;
+      }
 
       snakeCaseToCamelCase(objFromFile as Record<string, unknown>);
 
