@@ -36,7 +36,12 @@ import SqbsExportDialog from './Components/SqbsExportDialog';
 import AboutYfDialog from './Components/AboutYfDialog';
 
 window.onerror = () => window.electron.ipcRenderer.sendMessage(IpcRendToMain.WebPageCrashed);
-window.electron.ipcRenderer.removeAllListeners(); // needed in dev environemnt so that you don't end up with duplicate listers when the app reloads
+// Only needed in dev: HMR re-evaluates this module, which would otherwise
+// stack duplicate listeners on each reload. In production the module loads
+// once, so the call is unnecessary work.
+if (process.env.NODE_ENV === 'development') {
+  window.electron.ipcRenderer.removeAllListeners();
+}
 const tournManager = new TournamentManager();
 
 export default function App() {
