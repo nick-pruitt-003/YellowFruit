@@ -30,7 +30,7 @@ import { Round } from './DataModel/Round';
 import TempPhaseManager from './Modal Managers/TempPhaseManager';
 import TempPoolManager from './Modal Managers/TempPoolManager';
 import TempRankManager from './Modal Managers/TempRankManager';
-import { snakeCaseToCamelCase, camelCaseToSnakeCase } from './DataModel/CaseConversion';
+import { snakeCaseToCamelCase, camelCaseToSnakeCase, earlyYftFileConversions } from './DataModel/CaseConversion';
 import { CommonRuleSets } from './DataModel/ScoringRules';
 import { qbjFileValidVersion } from './DataModel/QbjUtils';
 import PoolAssignmentModalManager from './Modal Managers/PoolAssignmentModalManager';
@@ -303,6 +303,10 @@ export class TournamentManager {
   }
 
   private parseYftFile(filePath: string, objFromFile: object, curYfVersion?: string) {
+    // Run version-gated conversions BEFORE snake↔camel. Pre-4.0.18 files saved
+    // lightning_points in camelCase; without this prep step snakeCaseToCamelCase
+    // would overwrite the existing value with undefined. See PR #117.
+    earlyYftFileConversions(objFromFile as Record<string, unknown>);
     snakeCaseToCamelCase(objFromFile as Record<string, unknown>);
     const loadedTournament = this.loadTournamentFromQbjObjects(objFromFile as IQbjWholeFile, curYfVersion);
     if (loadedTournament === null) {

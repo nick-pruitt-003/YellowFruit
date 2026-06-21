@@ -1,5 +1,8 @@
 // QBJ schema uses a different case for property names than the internal YF data structures do
 
+import { versionLt } from '../Utils/GeneralUtils';
+import { QbjTypeNames } from './QbjEnums';
+
 export function camelCaseToSnakeCase(obj: Record<string, unknown>) {
   if (obj == null || typeof obj !== 'object') return;
 
@@ -269,5 +272,53 @@ export function snakeCaseToCamelCase(obj: Record<string, unknown>) {
 
   for (const prop in obj) {
     if (typeof obj[prop] === 'object') snakeCaseToCamelCase(obj[prop] as Record<string, unknown>);
+  }
+}
+
+/**
+ * Data conversions that need to be run on a .yft file immediately after parsing
+ * the JSON, *before* running snakeCaseToCamelCase.
+ *
+ * @param fileObj The top-level object representing the whole yft file
+ */
+export function earlyYftFileConversions(fileObj: Record<string, unknown>) {
+  let version: string | undefined;
+  try {
+    const yftObjects = fileObj.objects as Array<Record<string, unknown>>;
+    const tournamentObj = yftObjects.find((o) => o.type === QbjTypeNames.Tournament);
+    version = (tournamentObj?.YfData as Record<string, unknown> | undefined)?.YfVersion as string | undefined;
+  } catch {
+    return;
+  }
+
+  if (!version) return;
+
+  if (versionLt(version, '4.0.18')) {
+    fixLightningPointsConversion(fileObj);
+  }
+}
+
+/** In older versions, lightning_points was saved in camelCase. Move it to
+ *  snake_case BEFORE snakeCaseToCamelCase runs — otherwise that pass would
+ *  overwrite the existing camelCase value with undefined (lightningPoints =
+ *  lightning_points, where lightning_points doesn't exist). */
+function fixLightningPointsConversion(obj: Record<string, unknown>) {
+  if (obj == null || typeof obj !== 'object') return;
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      if (item !== null && typeof item === 'object') {
+        fixLightningPointsConversion(item as Record<string, unknown>);
+      }
+    }
+    return;
+  }
+
+  if (obj.lightningPoints !== undefined) {
+    obj.lightning_points = obj.lightningPoints;
+    delete obj.lightningPoints;
+  }
+
+  for (const prop in obj) {
+    if (typeof obj[prop] === 'object') fixLightningPointsConversion(obj[prop] as Record<string, unknown>);
   }
 }
