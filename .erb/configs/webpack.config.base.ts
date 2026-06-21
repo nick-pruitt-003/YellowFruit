@@ -31,6 +31,14 @@ const configuration: webpack.Configuration = {
           },
         },
       },
+      {
+        // MUI v9 ships .mjs files that import deps without explicit extensions
+        // (e.g. 'react-transition-group/TransitionGroupContext'). Webpack 5
+        // treats .mjs as strict ESM, which requires fully-specified paths.
+        // Disable that strictness for node_modules so MUI (and similar) resolve.
+        test: /\.m?js$/,
+        resolve: { fullySpecified: false },
+      },
     ],
   },
 
