@@ -38,6 +38,13 @@ export interface IYftFileMatchTeam extends IQbjMatchTeam, IYftFileObject {
 interface IMatchTeamExtraData {
   overTimeBuzzes?: IQbjPlayerAnswerCount[];
   validation: IYftFileMatchValidationMsg[];
+  /** Manually-entered bonus stats (QBNC-style formats where derived
+   *  values are wrong because TUH ≠ bonus equivalents). All optional;
+   *  when undefined, the corresponding getter falls back to the
+   *  derived computation. */
+  manualBonusesHeard?: number;
+  manualBonusPoints?: number;
+  manualBouncebackPartsHeard?: number;
 }
 
 /** One team's performance in one game */
@@ -63,6 +70,20 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
    * not inflate the PPB denominator.
    */
   importedNonBonusTossups?: number;
+
+  /** Manually-entered bonuses heard (QBNC mode). When set, getBonusesHeard()
+   *  returns this directly instead of inferring from positive buzzes. */
+  manualBonusesHeard?: number;
+
+  /** Manually-entered bonus points (QBNC mode). When set, getBonusPoints()
+   *  returns this directly instead of subtracting tossup/lightning/bb
+   *  totals from team points. */
+  manualBonusPoints?: number;
+
+  /** Manually-entered bounceback parts heard (QBNC mode). When set,
+   *  Match.getBouncebackPartsHeard() returns this for this team instead
+   *  of inferring from opponent's missed parts. */
+  manualBouncebackPartsHeard?: number;
 
   /** Performances of each player. A player being listed here doesn't necessarily mean they actually played in this game. */
   matchPlayers: MatchPlayer[] = [];
@@ -113,6 +134,10 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     this.points = source.points;
     this.bonusBouncebackPoints = source.bonusBouncebackPoints;
     this.lightningPoints = source.lightningPoints;
+    this.importedNonBonusTossups = source.importedNonBonusTossups;
+    this.manualBonusesHeard = source.manualBonusesHeard;
+    this.manualBonusPoints = source.manualBonusPoints;
+    this.manualBouncebackPartsHeard = source.manualBouncebackPartsHeard;
     this.overTimeBuzzes = source.overTimeBuzzes.map((ac) => ac.makeCopy());
     this.totalScoreFieldValidation = source.totalScoreFieldValidation.makeCopy();
     this.bouncebackFieldValidation = source.bouncebackFieldValidation.makeCopy();
@@ -141,6 +166,9 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     const yfData: IMatchTeamExtraData = {
       overTimeBuzzes: this.overTimeBuzzes?.map((ac) => ac.toFileObject()),
       validation: this.modalBottomValidation.toFileObject(),
+      manualBonusesHeard: this.manualBonusesHeard,
+      manualBonusPoints: this.manualBonusPoints,
+      manualBouncebackPartsHeard: this.manualBouncebackPartsHeard,
     };
     const yftFileObj: IYftFileMatchTeam = { YfData: yfData, ...qbjObject };
     return yftFileObj;
@@ -244,6 +272,10 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
   }
 
   getBonusesHeard(scoringRules: ScoringRules): number {
+    // QBNC-style formats may set this manually because TUH ≠ bonus
+    // equivalents (some tossups don't award bonuses, parts skipped, etc.)
+    if (this.manualBonusesHeard !== undefined) return this.manualBonusesHeard;
+
     let tot = 0;
     this.matchPlayers.forEach((mp) => {
       tot += mp.getTotalBuzzes(true);
@@ -255,6 +287,11 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
   }
 
   getBonusPoints(): number {
+    // QBNC-style formats may set this manually rather than deriving from
+    // the team total, since a manually-entered bonus total catches
+    // scorekeeper buzz-entry errors instead of hiding them.
+    if (this.manualBonusPoints !== undefined) return this.manualBonusPoints;
+
     return (
       (this.points || 0) - this.getTossupPoints() - (this.bonusBouncebackPoints || 0) - (this.lightningPoints || 0)
     );

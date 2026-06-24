@@ -375,6 +375,12 @@ export class Match implements IQbjMatch, IYftDataModelObject {
   }
 
   getBouncebackPartsHeard(whichTeam: LeftOrRight, scoringRules: ScoringRules): number {
+    // QBNC-style formats may set this manually per team because the derived
+    // value (opponent's missed parts) is wrong when bonus parts can be
+    // skipped, unread, or otherwise decoupled from opponent's bonus points.
+    const manual = this.getMatchTeam(whichTeam).manualBouncebackPartsHeard;
+    if (manual !== undefined) return manual;
+
     if (!scoringRules.canCalculateBounceBackPartsHeard()) return Number.NaN;
     const otherMT = this.getOpponent(whichTeam);
     const availPts = otherMT.getBonusesHeard(scoringRules) * scoringRules.maximumBonusScore - otherMT.getBonusPoints();

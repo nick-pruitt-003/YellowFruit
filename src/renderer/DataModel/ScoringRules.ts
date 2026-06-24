@@ -10,6 +10,23 @@ export enum CommonRuleSets {
   AcfPowers = 'mAcfPowers',
 }
 
+/** How the scorekeeper enters bonus stats per match.
+ *  Mirrors SQBS's "Bonus Conversion Tracking" radio set (minus options
+ *  already covered by the Bonuses on/off and Bouncebacks on/off toggles). */
+export enum BonusTrackingMode {
+  /** Bonus heard count and bonus points both derived from player buzzes
+   *  and team total — YF's traditional behaviour. */
+  Automatic = 'Automatic',
+  /** Bonus heard count entered manually, bonus points still derived.
+   *  Useful when TUH ≠ bonus equivalents (some tossups dead-end without
+   *  awarding a bonus). */
+  ManualHeardAutoPoints = 'ManualHeardAutoPoints',
+  /** Both bonus heard count and bonus points entered manually. Required
+   *  for QBNC-style formats. Bounceback parts heard also becomes manual
+   *  when bouncebacks are enabled. */
+  Manual = 'Manual',
+}
+
 /**
  * The rules for a tournament. Corresponds to qb schema objects
  * https://schema.quizbowl.technology/tournament
@@ -63,6 +80,9 @@ export interface IYftFileScoringRules extends IQbjScoringRules, IYftFileObject {
 /** Additional info not in qbj but needed for a .yft file */
 interface IScoringRulesExtraData {
   timed: boolean;
+  /** How the scorekeeper enters bonus stats (auto-derive vs manual entry).
+   *  Optional so legacy files default to Automatic. */
+  bonusTrackingMode?: BonusTrackingMode;
 }
 
 /** YellowFruit implementation of the ScoringRules object */
@@ -140,6 +160,10 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
   lightningDivisor: number = 10;
 
   answerTypes: AnswerType[] = [];
+
+  /** How scorekeepers enter bonus stats per match. Defaults to derived
+   *  (current behaviour); QBNC and similar formats need Manual. */
+  bonusTrackingMode: BonusTrackingMode = BonusTrackingMode.Automatic;
 
   get id(): string {
     return `ScoringRules_${this.name}`;
@@ -237,7 +261,13 @@ export class ScoringRules implements IQbjScoringRules, IYftDataModelObject {
       return qbjObject;
     }
 
-    const yfData: IScoringRulesExtraData = { timed: this.timed };
+    const yfData: IScoringRulesExtraData = {
+      timed: this.timed,
+      // Only persist the mode if it isn't the default — keeps old YF files
+      // diff-clean and lets legacy files load without surfacing the field.
+      bonusTrackingMode:
+        this.bonusTrackingMode === BonusTrackingMode.Automatic ? undefined : this.bonusTrackingMode,
+    };
     const yftFileObj = { YfData: yfData, ...qbjObject };
 
     return yftFileObj;

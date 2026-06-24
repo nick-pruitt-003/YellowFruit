@@ -259,6 +259,13 @@ export default class FileParser {
     yftScoringRules.useBonuses = useBonuses;
     if (!useBonuses) return;
 
+    // QBNC-style manual bonus tracking mode. Legacy files lack this — the
+    // default Automatic on a fresh ScoringRules covers that case.
+    const yfExtraData = (sourceQbj as IYftFileScoringRules).YfData;
+    if (yfExtraData?.bonusTrackingMode) {
+      yftScoringRules.bonusTrackingMode = yfExtraData.bonusTrackingMode;
+    }
+
     const maximumBonusScore = sourceQbj.maximumBonusScore ?? 30;
     if (badInteger(maximumBonusScore, 1, 1000)) {
       throw new Error(`Scoring Rules: Invalid maximum bonus score: ${maximumBonusScore}`);
@@ -842,6 +849,11 @@ export default class FileParser {
     if (qbjMatchTeam.correctTossupsWithoutBonuses != null) {
       yfMatchTeam.importedNonBonusTossups = qbjMatchTeam.correctTossupsWithoutBonuses;
     }
+    // QBNC-mode manual bonus tracking — read from YfData so they round-trip
+    // through .yft saves. Undefined when the tournament uses derived tracking.
+    yfMatchTeam.manualBonusesHeard = yfExtraData?.manualBonusesHeard;
+    yfMatchTeam.manualBonusPoints = yfExtraData?.manualBonusPoints;
+    yfMatchTeam.manualBouncebackPartsHeard = yfExtraData?.manualBouncebackPartsHeard;
     yfMatchTeam.matchPlayers = this.parseMatchTeamMatchPlayers(qbjMatchTeam.matchPlayers as IIndeterminateQbj[], team);
     for (const otAC of yfExtraData?.overTimeBuzzes || []) {
       const tempAnswerCount = this.parsePlayerAnswerCount(otAC as IIndeterminateQbj);
