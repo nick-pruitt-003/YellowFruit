@@ -77,7 +77,9 @@ const configuration: webpack.Configuration = {
       NODE_ENV: 'development',
     }),
 
-    new webpack.HotModuleReplacementPlugin(),
+    // HotModuleReplacementPlugin is installed automatically by webpack-dev-server
+    // when `devServer.hot: true` (set below). Adding it manually triggers a
+    // "you don't have to add it manually" warning on every start.
 
     new ESLintPlugin({
       extensions: ['ts', 'tsx'],
@@ -116,9 +118,14 @@ const configuration: webpack.Configuration = {
       verbose: true,
     },
     setupMiddlewares(middlewares) {
+      // Use the platform's npm wrapper directly instead of going through a
+      // shell. Node deprecates `spawn(cmd, args, { shell: true })` (DEP0190)
+      // because args aren't shell-escaped — only concatenated. With shell:
+      // false the args go straight to execve and that risk disappears.
+      const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
       console.log('Starting preload.js builder...');
-      const preloadProcess = spawn('npm', ['run', 'start:preload'], {
-        shell: true,
+      const preloadProcess = spawn(npmCmd, ['run', 'start:preload'], {
         stdio: 'inherit',
       })
         .on('close', (code: number) => process.exit(code!))
@@ -129,8 +136,7 @@ const configuration: webpack.Configuration = {
       if (process.env.MAIN_ARGS) {
         args = args.concat(['--', ...process.env.MAIN_ARGS.matchAll(/"[^"]+"|[^\s"]+/g)].flat());
       }
-      spawn('npm', args, {
-        shell: true,
+      spawn(npmCmd, args, {
         stdio: 'inherit',
       })
         .on('close', (code: number) => {
