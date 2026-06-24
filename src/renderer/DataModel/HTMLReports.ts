@@ -337,11 +337,24 @@ export default class HtmlReportGenerator {
   /** The actual data of the individuals page */
   private getIndividualsHtml() {
     const sections: string[] = [];
-    const prelims = this.tournament.stats[0];
-    if (!prelims) return '';
+    if (this.tournament.stats.length === 0) return '';
 
-    const prelimsHeader = this.headerWithDivider(prelims.phase.name, StatReportPages.Individuals, true);
-    sections.push(`${prelimsHeader}\n${this.individualsTable(prelims.players)}`);
+    // Reverse-iterate so playoff phases appear above prelims, matching the
+    // order used by the standings page. Skip phases that have no player data
+    // yet (e.g., a defined playoff stage with no games played).
+    let printedSectionCount = 0;
+    for (let i = this.tournament.stats.length - 1; i >= 0; i--) {
+      const phaseStats = this.tournament.stats[i];
+      if (!phaseStats.players.some((p) => p.tossupsHeard > 0)) continue;
+
+      printedSectionCount++;
+      const header = this.headerWithDivider(
+        phaseStats.phase.name,
+        StatReportPages.Individuals,
+        printedSectionCount === 1,
+      );
+      sections.push(`${header}\n${this.individualsTable(phaseStats.players)}`);
+    }
 
     if (this.tournament.numberOfPhasesWithStats() > 1 && this.tournament.cumulativeStats) {
       const aggregateHeader = this.headerWithDivider('All Games', StatReportPages.Individuals);

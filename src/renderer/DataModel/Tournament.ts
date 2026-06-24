@@ -214,7 +214,10 @@ class Tournament implements IQbjTournament, IYftDataModelObject {
     else if (this.scoringRules.useBonuses) this.cumulativeStats.sortTeamsByPPB();
     else this.cumulativeStats.sortTeamsByPptuh();
 
-    this.stats.find((phSt) => phSt.phase.phaseType === PhaseTypes.Prelim)?.compileIndividualStats();
+    // Compile individuals for every full phase (prelims + each playoff stage),
+    // not just prelims. PhaseStandings.compileIndividualStats() already builds
+    // a per-phase PlayerStats list scoped to that phase's rounds + carryovers.
+    this.stats.forEach((phSt) => phSt.compileIndividualStats());
   }
 
   reSortStandingsByFinalRank() {
