@@ -7,7 +7,7 @@ import MatchValidationMessage, {
   MatchValidationType,
 } from './MatchValidationMessage';
 import { IQbjPlayerAnswerCount, PlayerAnswerCount, sortAnswerCounts } from './PlayerAnswerCount';
-import { ScoringRules } from './ScoringRules';
+import { BonusTrackingMode, ScoringRules } from './ScoringRules';
 import { IQbjTeam, Team } from './Team';
 
 export interface IQbjMatchTeam extends IQbjObject {
@@ -437,6 +437,7 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     this.validateOvertimeBuzzes();
     this.validateTotalAndLightningPoints(scoringRules);
     this.validateLightningPoints(scoringRules);
+    this.validateManualBonusMath(scoringRules);
   }
 
   clearValidation() {
@@ -506,6 +507,44 @@ export class MatchTeam implements IQbjMatchTeam, IYftDataModelObject {
     } else {
       this.clearValidationMessage(MatchValidationType.LightningDivisorMismatch);
     }
+  }
+
+  /** Manual-mode arithmetic sanity check: the four manually-entered numbers
+   *  (or their derived equivalents) must reconcile with the team total.
+   *  This is the whole point of QBNC's manual mode — buzz entry errors that
+   *  Automatic mode silently absorbs into the derived bonus number become
+   *  visible here. */
+  validateManualBonusMath(scoringRules: ScoringRules) {
+    const tag = MatchValidationType.ManualBonusMathMismatch;
+    // Only meaningful when bonus points are manually entered. In other
+    // modes the bonus total is derived from `points`, so this would always
+    // pass trivially.
+    if (
+      !scoringRules.useBonuses ||
+      scoringRules.bonusTrackingMode !== BonusTrackingMode.Manual ||
+      this.manualBonusPoints === undefined ||
+      this.points === undefined
+    ) {
+      this.clearValidationMessage(tag);
+      return;
+    }
+
+    const tossupPts = this.getTossupPoints();
+    const bbPts = this.bonusBouncebackPoints ?? 0;
+    const ltngPts = this.lightningPoints ?? 0;
+    const expectedTotal = tossupPts + this.manualBonusPoints + bbPts + ltngPts;
+    if (expectedTotal === this.points) {
+      this.clearValidationMessage(tag);
+      return;
+    }
+
+    const diff = this.points - expectedTotal;
+    const diffStr = diff > 0 ? `+${diff}` : diff.toString();
+    this.addValidationMessage(
+      tag,
+      ValidationStatuses.Error,
+      `Score doesn't reconcile: tossups (${tossupPts}) + bonus (${this.manualBonusPoints}) + bounceback (${bbPts}) + lightning (${ltngPts}) = ${expectedTotal}, but total is ${this.points} (off by ${diffStr})`,
+    );
   }
 
   validateBouncebackPoints(scoringRules: ScoringRules) {

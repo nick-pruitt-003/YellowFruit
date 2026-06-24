@@ -35,6 +35,7 @@ export enum MatchValidationType {
   LightningDivisorMismatch = 'LightningDivisorMismatch',
   BouncebackDivisorMismatch = 'BouncebackDivisorMismatch',
   OvertimeTuhTooHigh = 'OvertimeTuhTooHigh',
+  ManualBonusMathMismatch = 'ManualBonusMathMismatch',
 }
 
 export interface IYftFileMatchValidationMsg {
