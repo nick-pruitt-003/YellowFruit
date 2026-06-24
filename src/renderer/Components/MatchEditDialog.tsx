@@ -47,6 +47,7 @@ import { PlayerAnswerCount } from '../DataModel/PlayerAnswerCount';
 import MatchValidationMessage from '../DataModel/MatchValidationMessage';
 import { otherTeam } from '../DataModel/Match';
 import { trunc } from '../Utils/GeneralUtils';
+import { BonusTrackingMode } from '../DataModel/ScoringRules';
 
 export default function MatchEditDialog() {
   const tournManager = useContext(TournamentContext);
@@ -650,21 +651,86 @@ interface IBonusDisplayProps {
 function BonusDisplay(props: IBonusDisplayProps) {
   const { whichTeam } = props;
   const modalManager = useContext(MatchEditModalContext);
+  const rules = modalManager.tournament.scoringRules;
   const [matchTeam] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam));
-  const [bonusPoints, bonusesHeard, ppb] = matchTeam.getBonusStats(modalManager.tournament.scoringRules);
+  const [bonusPoints, bonusesHeard, ppb] = matchTeam.getBonusStats(rules);
   const [forfeit] = useSubscription(modalManager.tempMatch.isForfeit());
+  const [manualHeard, setManualHeard] = useSubscription(matchTeam.manualBonusesHeard?.toString() ?? '');
+  const [manualPts, setManualPts] = useSubscription(matchTeam.manualBonusPoints?.toString() ?? '');
 
-  if (!modalManager.tournament.scoringRules.useBonuses) return null;
+  if (!rules.useBonuses) return null;
 
   if (matchTeam.team === undefined || forfeit) {
     return <span>&emsp;&nbsp;Bonuses:&emsp;&mdash; pts&emsp;|&emsp;&mdash; heard&emsp;|&emsp;&mdash; ppb</span>;
   }
 
+  const heardEditable = rules.bonusTrackingMode !== BonusTrackingMode.Automatic;
+  const ptsEditable = rules.bonusTrackingMode === BonusTrackingMode.Manual;
+
+  // Read-only legacy display (Automatic mode) keeps the compact one-line format.
+  if (!heardEditable) {
+    return (
+      <span>
+        &emsp;&nbsp;<b>Bonuses:</b>&emsp;{`${bonusPoints} pts`}&emsp;|&emsp;{`${bonusesHeard} heard`}&emsp;|&emsp;
+        {`${ppb} ppb`}
+      </span>
+    );
+  }
+
+  const handleHeardBlur = () => {
+    const valToUse = modalManager.setManualBonusesHeard(whichTeam, manualHeard);
+    setManualHeard(valToUse?.toString() ?? '');
+  };
+  const handlePtsBlur = () => {
+    const valToUse = modalManager.setManualBonusPoints(whichTeam, manualPts);
+    setManualPts(valToUse?.toString() ?? '');
+  };
+
   return (
-    <span>
-      &emsp;&nbsp;<b>Bonuses:</b>&emsp;{`${bonusPoints} pts`}&emsp;|&emsp;{`${bonusesHeard} heard`}&emsp;|&emsp;
-      {`${ppb} ppb`}
-    </span>
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'baseline',
+        '& .MuiInputBase-input': { paddingLeft: 0.5, paddingRight: 0 },
+      }}
+    >
+      <div>&emsp;&nbsp;<b>Bonuses:</b>&emsp;</div>
+      {ptsEditable ? (
+        <>
+          <YfNumericField
+            sx={{ width: '6ch' }}
+            slotProps={{ htmlInput: { min: 0 } }}
+            fullWidth
+            variant="standard"
+            size="small"
+            value={manualPts}
+            onChange={(e) => setManualPts(e.target.value)}
+            onBlur={handlePtsBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handlePtsBlur();
+            }}
+          />
+          <div>&nbsp;pts&emsp;|&emsp;</div>
+        </>
+      ) : (
+        <div>{`${bonusPoints} pts`}&emsp;|&emsp;</div>
+      )}
+      <YfNumericField
+        sx={{ width: '5ch' }}
+        slotProps={{ htmlInput: { min: 0 } }}
+        fullWidth
+        variant="standard"
+        size="small"
+        value={manualHeard}
+        onChange={(e) => setManualHeard(e.target.value)}
+        onBlur={handleHeardBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleHeardBlur();
+        }}
+      />
+      <div>&nbsp;heard&emsp;|&emsp;{`${ppb} ppb`}</div>
+    </Box>
   );
 }
 
@@ -705,16 +771,25 @@ function BounceBackRow(props: IBounceBackRowProps) {
   const [matchTeam] = useSubscription(modalManager.tempMatch.getMatchTeam(whichTeam));
   const rules = modalManager.tournament.scoringRules;
   const [bbPts, setBbPts] = useSubscription(matchTeam.bonusBouncebackPoints?.toString() || '');
+  const [manualHeard, setManualHeard] = useSubscription(matchTeam.manualBouncebackPartsHeard?.toString() ?? '');
   const divisor = rules.bonusDivisor;
   const [forfeit] = useSubscription(modalManager.tempMatch.isForfeit());
   const [partsHrd, conversionPct] = modalManager.tempMatch.getBouncebackStatsString(whichTeam, rules);
   const [invalid] = useSubscription(matchTeam.bouncebackFieldValidation.isError());
 
-  if (!modalManager.tournament.scoringRules.bonusesBounceBack || matchTeam === undefined || forfeit) return null;
+  if (!rules.bonusesBounceBack || matchTeam === undefined || forfeit) return null;
 
-  const handleBlur = () => {
+  // In non-Automatic modes, scorekeeper enters bounceback parts heard manually
+  // (can't be derived from opponent stats when bonus parts can be skipped).
+  const heardEditable = rules.bonusTrackingMode !== BonusTrackingMode.Automatic;
+
+  const handlePtsBlur = () => {
     const valToUse = modalManager.setBouncebackPoints(whichTeam, bbPts);
     setBbPts(valToUse?.toString() || '');
+  };
+  const handleHeardBlur = () => {
+    const valToUse = modalManager.setManualBouncebackPartsHeard(whichTeam, manualHeard);
+    setManualHeard(valToUse?.toString() ?? '');
   };
 
   return (
@@ -722,6 +797,7 @@ function BounceBackRow(props: IBounceBackRowProps) {
       sx={{
         display: 'flex',
         flexWrap: 'wrap',
+        alignItems: 'baseline',
         paddingBottom: 2,
         '& .MuiInputBase-input': { paddingLeft: 0.5, paddingRight: 0 },
       }}
@@ -738,14 +814,32 @@ function BounceBackRow(props: IBounceBackRowProps) {
         error={invalid}
         value={bbPts}
         onChange={(e) => setBbPts(e.target.value)}
-        onBlur={handleBlur}
+        onBlur={handlePtsBlur}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') handleBlur();
+          if (e.key === 'Enter') handlePtsBlur();
         }}
       />
-      <div>
-        pts&emsp;|&emsp;{`${partsHrd} parts heard`}&emsp;|&emsp;{`${conversionPct}% success rate`}
-      </div>
+      <div>&nbsp;pts&emsp;|&emsp;</div>
+      {heardEditable ? (
+        <>
+          <YfNumericField
+            sx={{ width: '5ch' }}
+            slotProps={{ htmlInput: { min: 0 } }}
+            fullWidth
+            variant="standard"
+            size="small"
+            value={manualHeard}
+            onChange={(e) => setManualHeard(e.target.value)}
+            onBlur={handleHeardBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleHeardBlur();
+            }}
+          />
+          <div>&nbsp;parts heard&emsp;|&emsp;{`${conversionPct}% success rate`}</div>
+        </>
+      ) : (
+        <div>{`${partsHrd} parts heard`}&emsp;|&emsp;{`${conversionPct}% success rate`}</div>
+      )}
     </Box>
   );
 }

@@ -393,6 +393,39 @@ export class TempMatchManager {
     return valToSave;
   }
 
+  /** Manual bonus-heard override (QBNC-style tracking modes). Pass an empty
+   *  or non-numeric string to clear the override and fall back to derived. */
+  setManualBonusesHeard(whichTeam: LeftOrRight, val: string): number | undefined {
+    const parsed = parseInt(val, 10);
+    const valToSave = Number.isNaN(parsed) ? undefined : parsed;
+    this.tempMatch.getMatchTeam(whichTeam).manualBonusesHeard = valToSave;
+    this.tempMatch.validateMatchTeams(this.tournament.scoringRules);
+    this.dataChangedReactCallback();
+    return valToSave;
+  }
+
+  /** Manual bonus-points override (Manual tracking mode only). */
+  setManualBonusPoints(whichTeam: LeftOrRight, val: string): number | undefined {
+    const parsed = parseInt(val, 10);
+    const valToSave = Number.isNaN(parsed) ? undefined : parsed;
+    this.tempMatch.getMatchTeam(whichTeam).manualBonusPoints = valToSave;
+    this.tempMatch.validateMatchTeams(this.tournament.scoringRules);
+    this.tempMatch.validateBouncebackConversion(this.tournament.scoringRules);
+    this.dataChangedReactCallback();
+    return valToSave;
+  }
+
+  /** Manual bounceback-parts-heard override (Manual mode + bouncebacks on). */
+  setManualBouncebackPartsHeard(whichTeam: LeftOrRight, val: string): number | undefined {
+    const parsed = parseInt(val, 10);
+    const valToSave = Number.isNaN(parsed) ? undefined : parsed;
+    this.tempMatch.getMatchTeam(whichTeam).manualBouncebackPartsHeard = valToSave;
+    this.tempMatch.validateMatchTeams(this.tournament.scoringRules);
+    this.tempMatch.validateBouncebackConversion(this.tournament.scoringRules);
+    this.dataChangedReactCallback();
+    return valToSave;
+  }
+
   setNotes(notes: string) {
     this.tempMatch.notes = notes;
     this.dataChangedReactCallback();
