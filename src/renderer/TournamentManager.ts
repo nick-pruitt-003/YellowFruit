@@ -31,7 +31,7 @@ import TempPhaseManager from './Modal Managers/TempPhaseManager';
 import TempPoolManager from './Modal Managers/TempPoolManager';
 import TempRankManager from './Modal Managers/TempRankManager';
 import { snakeCaseToCamelCase, camelCaseToSnakeCase, earlyYftFileConversions } from './DataModel/CaseConversion';
-import { CommonRuleSets } from './DataModel/ScoringRules';
+import { BonusTrackingMode, CommonRuleSets } from './DataModel/ScoringRules';
 import { qbjFileValidVersion } from './DataModel/QbjUtils';
 import PoolAssignmentModalManager from './Modal Managers/PoolAssignmentModalManager';
 import MatchImportResult from './DataModel/MatchImportResult';
@@ -1001,6 +1001,13 @@ export class TournamentManager {
 
   setBonusesBounceBack(checked: boolean) {
     this.tournament.scoringRules.bonusesBounceBack = checked;
+    this.tournament.clearStdRuleSet();
+    this.onDataChanged();
+  }
+
+  setBonusTrackingMode(mode: BonusTrackingMode) {
+    if (this.tournament.scoringRules.bonusTrackingMode === mode) return;
+    this.tournament.scoringRules.bonusTrackingMode = mode;
     this.tournament.clearStdRuleSet();
     this.onDataChanged();
   }

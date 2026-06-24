@@ -1,17 +1,37 @@
 import Grid from '@mui/material/Grid';
-import { FormGroup, FormControlLabel, Switch, Typography, Stack, Box } from '@mui/material';
+import {
+  Box,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  Stack,
+  Switch,
+  Typography,
+} from '@mui/material';
 import { ChangeEvent, useContext, useEffect, useState } from 'react';
 import YfCard from './YfCard';
 import useSubscription from '../Utils/CustomHooks';
 import { TournamentContext } from '../TournamentManager';
 import { parseAndValidateStringToInt, invalidInteger } from '../Utils/GeneralUtils';
 import { CollapsibleArea, YfNumericField } from '../Utils/GeneralReactUtils';
+import { BonusTrackingMode } from '../DataModel/ScoringRules';
+
+const bonusTrackingModeLabels: Record<BonusTrackingMode, string> = {
+  [BonusTrackingMode.Automatic]: 'Automatic',
+  [BonusTrackingMode.ManualHeardAutoPoints]: 'Manual heard, auto points',
+  [BonusTrackingMode.Manual]: 'Manual',
+};
 
 function BonusSettingsCard() {
   const tournManager = useContext(TournamentContext);
   const thisTournamentRules = tournManager.tournament.scoringRules;
   const [useBonuses, setUseBonuses] = useSubscription(thisTournamentRules.useBonuses);
   const [bonusesBounce, setBonusesBounce] = useSubscription(thisTournamentRules.bonusesBounceBack);
+  const [trackingMode, setTrackingMode] = useSubscription(thisTournamentRules.bonusTrackingMode);
   const readOnly = tournManager.tournament.hasMatchData;
 
   const handleUseBonusesChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -22,6 +42,12 @@ function BonusSettingsCard() {
   const handleBonusesBounceChange = (e: ChangeEvent<HTMLInputElement>) => {
     setBonusesBounce(e.target.checked);
     tournManager.setBonusesBounceBack(e.target.checked);
+  };
+
+  const handleTrackingModeChange = (e: SelectChangeEvent<BonusTrackingMode>) => {
+    const newMode = e.target.value as BonusTrackingMode;
+    setTrackingMode(newMode);
+    tournManager.setBonusTrackingMode(newMode);
   };
 
   return (
@@ -38,6 +64,23 @@ function BonusSettingsCard() {
           }
         />
       </FormGroup>
+      {useBonuses && (
+        <FormControl size="small" fullWidth sx={{ marginBottom: 2 }} disabled={readOnly}>
+          <InputLabel id="bonus-tracking-mode-label">Tracking</InputLabel>
+          <Select
+            labelId="bonus-tracking-mode-label"
+            label="Tracking"
+            value={trackingMode}
+            onChange={handleTrackingModeChange}
+          >
+            {(Object.values(BonusTrackingMode) as BonusTrackingMode[]).map((mode) => (
+              <MenuItem key={mode} value={mode}>
+                {bonusTrackingModeLabels[mode]}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
       {useBonuses && (
         <CollapsibleArea title={<Typography variant="subtitle2">Advanced</Typography>} secondaryTitle={null}>
           <AdvancedBonusSection />
