@@ -389,9 +389,12 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
   getBouncebackConvPct(whichTeam: LeftOrRight, scoringRules: ScoringRules, bbPartsHrd?: number) {
     const heard = bbPartsHrd !== undefined ? bbPartsHrd : this.getBouncebackPartsHeard(whichTeam, scoringRules);
-    if (Number.isNaN(heard)) return 0;
-    const partsConverted =
-      (this.getMatchTeam(whichTeam).bonusBouncebackPoints || 0) / (scoringRules.pointsPerBonusPart || 10);
+    if (Number.isNaN(heard)) return Number.NaN;
+    // Can't infer how many parts were converted from points alone when parts
+    // have varying values (e.g., QBNC's 5/10/15/20). The previous "|| 10"
+    // fallback produced silently wrong numbers in that case.
+    if (scoringRules.pointsPerBonusPart === undefined) return Number.NaN;
+    const partsConverted = (this.getMatchTeam(whichTeam).bonusBouncebackPoints || 0) / scoringRules.pointsPerBonusPart;
     return Math.round((100 * partsConverted) / heard);
   }
 
@@ -400,7 +403,8 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     const bbPartsHrd = this.getBouncebackPartsHeard(whichTeam, scoringRules);
     if (Number.isNaN(bbPartsHrd)) return ['-', '-'];
     if (bbPartsHrd === 0) return ['0', '-'];
-    return [bbPartsHrd.toString(), this.getBouncebackConvPct(whichTeam, scoringRules, bbPartsHrd).toString()];
+    const convPct = this.getBouncebackConvPct(whichTeam, scoringRules, bbPartsHrd);
+    return [bbPartsHrd.toString(), Number.isNaN(convPct) ? '-' : convPct.toString()];
   }
 
   /** String of the format "Central def. Washington" */

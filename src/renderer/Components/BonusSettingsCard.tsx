@@ -202,6 +202,7 @@ function AdvancedBonusSection() {
           maxValue={1000}
           onChange={setPtsPerPart}
           onBlur={() => handlePtsPerPartChange(ptsPerPart)}
+          helperText="Leave blank for formats with varying part values (e.g., QBNC 5/10/15/20)"
         />
         <AdvancedNumericRuleField
           label="Divisor"
@@ -227,14 +228,16 @@ interface IAdvancedNumericRuleFieldProps {
   disabled: boolean;
   minValue: number;
   maxValue: number;
+  /** Optional caption shown below the row to clarify what an empty/edge value means. */
+  helperText?: string;
 }
 
 /** small numeric field used for advanced settings like divisors */
 export function AdvancedNumericRuleField(props: IAdvancedNumericRuleFieldProps) {
-  const { label, required, value, onChange, onBlur, disabled, minValue, maxValue } = props;
+  const { label, required, value, onChange, onBlur, disabled, minValue, maxValue, helperText } = props;
   const [error, setError] = useState(false);
 
-   
+
   useEffect(() => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     if (!invalidInteger(value, minValue, maxValue)) setError(false);
@@ -252,26 +255,33 @@ export function AdvancedNumericRuleField(props: IAdvancedNumericRuleFieldProps) 
   };
 
   return (
-    <Grid container>
-      <Grid size="grow">
-        <InlineLabel text={label} />
+    <Box>
+      <Grid container>
+        <Grid size="grow">
+          <InlineLabel text={label} />
+        </Grid>
+        <Grid size="auto">
+          <YfNumericField
+            sx={{ marginTop: 1, width: '8ch' }}
+            size="small"
+            slotProps={{ htmlInput: { min: 0 } }}
+            disabled={disabled}
+            error={error}
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={() => onBlur(value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onBlur(value);
+            }}
+          />
+        </Grid>
       </Grid>
-      <Grid size="auto">
-        <YfNumericField
-          sx={{ marginTop: 1, width: '8ch' }}
-          size="small"
-          slotProps={{ htmlInput: { min: 0 } }}
-          disabled={disabled}
-          error={error}
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={() => onBlur(value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onBlur(value);
-          }}
-        />
-      </Grid>
-    </Grid>
+      {helperText && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3 }}>
+          {helperText}
+        </Typography>
+      )}
+    </Box>
   );
 }
 
