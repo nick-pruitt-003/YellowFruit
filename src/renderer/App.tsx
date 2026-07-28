@@ -1,4 +1,4 @@
-import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import { MemoryRouter as Router, Routes, Route } from 'react-router';
 
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
