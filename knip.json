@@ -14,8 +14,6 @@
   "webpack": false,
   "ignoreDependencies": [
     "@electron/notarize",
-    "@octokit/types",
-    "@pmmmwh/react-refresh-webpack-plugin",
     "@svgr/webpack",
     "@swc/core",
     "@teamsupercell/typings-for-css-modules-loader",
@@ -27,7 +25,6 @@
     "identity-obj-proxy",
     "npm-check-updates",
     "prettier",
-    "react-refresh",
     "sass-loader",
     "style-loader",
     "swc-loader",
