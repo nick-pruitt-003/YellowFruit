@@ -8,7 +8,6 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
-import ESLintPlugin from 'eslint-webpack-plugin';
 import { merge } from 'webpack-merge';
 import TerserPlugin from 'terser-webpack-plugin';
 import baseConfig from './webpack.config.base.ts';
@@ -144,11 +143,6 @@ const configuration: webpack.Configuration = {
       'process.type': '"renderer"',
     }),
 
-    new ESLintPlugin({
-      extensions: ['ts', 'tsx'],
-      context: webpackPaths.srcPath,
-      failOnError: true,
-    }),
   ],
 };
 

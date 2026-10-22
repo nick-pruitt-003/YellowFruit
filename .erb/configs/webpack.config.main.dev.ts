@@ -5,7 +5,6 @@
 import path from 'path';
 import webpack from 'webpack';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
-import ESLintPlugin from 'eslint-webpack-plugin';
 import { merge } from 'webpack-merge';
 import checkNodeEnv from '../scripts/check-node-env.js';
 import baseConfig from './webpack.config.base.ts';
@@ -47,11 +46,6 @@ const configuration: webpack.Configuration = {
       'process.type': '"browser"',
     }),
 
-    new ESLintPlugin({
-      extensions: ['ts'],
-      context: webpackPaths.srcMainPath,
-      cache: true,
-    }),
   ],
 
   /**
