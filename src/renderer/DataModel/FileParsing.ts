@@ -843,12 +843,6 @@ export default class FileParser {
     yfMatchTeam.forfeitLoss = qbjMatchTeam.forfeitLoss || false;
     yfMatchTeam.bonusBouncebackPoints = qbjMatchTeam.bonusBouncebackPoints;
     yfMatchTeam.lightningPoints = qbjMatchTeam.lightningPoints;
-    // Imported non-bonus tossup count (e.g., LIQBA_STANDARD Q1/Q3 quarters).
-    // Stored separately from overTimeBuzzes so PPB denominator is correct without
-    // affecting getOvertimePoints() / getPointsForPPG().
-    if (qbjMatchTeam.correctTossupsWithoutBonuses != null) {
-      yfMatchTeam.importedNonBonusTossups = qbjMatchTeam.correctTossupsWithoutBonuses;
-    }
     // QBNC-mode manual bonus tracking — read from YfData so they round-trip
     // through .yft saves. Undefined when the tournament uses derived tracking.
     yfMatchTeam.manualBonusesHeard = yfExtraData?.manualBonusesHeard;
@@ -861,6 +855,16 @@ export default class FileParser {
       yfMatchTeam.setOvertimeAnswerCount(tempAnswerCount.answerType, tempAnswerCount.number);
     }
     yfMatchTeam.sortOvertimeBuzzes();
+
+    // Imported non-bonus tossup count (e.g., LIQBA_STANDARD Q1/Q3 quarters).
+    // Stored separately from overTimeBuzzes so PPB denominator is correct without
+    // affecting getOvertimePoints() / getPointsForPPG(). YFT files save this total
+    // with the overtime buzzes already included, so subtract those (parsed just
+    // above) or every save/load cycle would count them again.
+    if (qbjMatchTeam.correctTossupsWithoutBonuses != null) {
+      const imported = qbjMatchTeam.correctTossupsWithoutBonuses - yfMatchTeam.getCorrectTossupsWithoutBonuses();
+      if (imported > 0) yfMatchTeam.importedNonBonusTossups = imported;
+    }
 
     if (yfMatchTeam.points === undefined) yfMatchTeam.calculateTotalPoints(qbjMatchTeam.bonusPoints || 0);
 
