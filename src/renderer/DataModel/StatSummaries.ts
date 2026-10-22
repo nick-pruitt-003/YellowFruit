@@ -14,6 +14,33 @@ import { Round } from './Round';
 import { ScoringRules } from './ScoringRules';
 import { Team } from './Team';
 
+/** Sort players from best to worst points per tossup heard, breaking ties by tossups heard */
+function sortPlayersByPptuh(players: PlayerStats[]) {
+  players.sort((a, b) => {
+    const aPptuh = a.getPptuh() ?? -999999;
+    const bPptuh = b.getPptuh() ?? -999999;
+    if (aPptuh === bPptuh) {
+      if (aPptuh > 0) return b.tossupsHeard - a.tossupsHeard;
+      return a.tossupsHeard - b.tossupsHeard;
+    }
+    return bPptuh - aPptuh;
+  });
+}
+
+/** Add one answer count into a running tally, combining it with the existing entry for its answer type */
+function addAnswerCount(tossupCounts: PlayerAnswerCount[], answerCount: PlayerAnswerCount) {
+  const tc = tossupCounts.find((ac) => ac.answerType.value === answerCount.answerType.value);
+  if (!tc) {
+    tossupCounts.push(new PlayerAnswerCount(answerCount.answerType, answerCount.number));
+    return;
+  }
+  if (tc.number === undefined) {
+    tc.number = answerCount.number;
+  } else {
+    tc.number += answerCount.number || 0;
+  }
+}
+
 /** One big list of the cumulative stats for all teams */
 export class AggregateStandings {
   teamStats: PoolTeamStats[];
@@ -52,7 +79,7 @@ export class AggregateStandings {
       }
     }
     this.calcAnyTiesExist();
-    this.sortPlayersByPptuh();
+    sortPlayersByPptuh(this.players);
   }
 
   private addMatchToTeamStats(match: Match, round: Round, phase: Phase) {
@@ -136,18 +163,6 @@ export class AggregateStandings {
       playerStats.addMatchPlayer(mp, tossupsRead);
       playerStats.addMatchResult(match, whichTeam, mp, round, phase);
     }
-  }
-
-  private sortPlayersByPptuh() {
-    this.players.sort((a, b) => {
-      const aPptuh = a.getPptuh() ?? -999999;
-      const bPptuh = b.getPptuh() ?? -999999;
-      if (aPptuh === bPptuh) {
-        if (aPptuh > 0) return b.tossupsHeard - a.tossupsHeard;
-        return a.tossupsHeard - b.tossupsHeard;
-      }
-      return bPptuh - aPptuh;
-    });
   }
 }
 
@@ -287,7 +302,7 @@ export class PhaseStandings {
     for (const match of this.carryoverMatches) {
       this.addMatchToIndividualStats(match);
     }
-    this.sortPlayersByPptuh();
+    sortPlayersByPptuh(this.players);
     this.assignIndividualRanks();
   }
 
@@ -308,18 +323,6 @@ export class PhaseStandings {
       }
       playerStats.addMatchPlayer(mp, tossupsRead);
     }
-  }
-
-  private sortPlayersByPptuh() {
-    this.players.sort((a, b) => {
-      const aPptuh = a.getPptuh() ?? -999999;
-      const bPptuh = b.getPptuh() ?? -999999;
-      if (aPptuh === bPptuh) {
-        if (aPptuh > 0) return b.tossupsHeard - a.tossupsHeard;
-        return a.tossupsHeard - b.tossupsHeard;
-      }
-      return bPptuh - aPptuh;
-    });
   }
 
   private assignIndividualRanks() {
@@ -641,22 +644,9 @@ export class PoolTeamStats {
     for (const matchPlayer of matchTeam.matchPlayers) {
       for (const answerCount of matchPlayer.answerCounts) {
         if (answerCount.number !== undefined) {
-          this.addAnswerCount(answerCount);
+          addAnswerCount(this.tossupCounts, answerCount);
         }
       }
-    }
-  }
-
-  private addAnswerCount(answerCount: PlayerAnswerCount) {
-    const tc = this.tossupCounts.find((ac) => ac.answerType.value === answerCount.answerType.value);
-    if (!tc) {
-      this.tossupCounts.push(new PlayerAnswerCount(answerCount.answerType, answerCount.number));
-      return;
-    }
-    if (tc.number === undefined) {
-      tc.number = answerCount.number;
-    } else {
-      tc.number += answerCount.number || 0;
     }
   }
 
@@ -676,7 +666,7 @@ export class PoolTeamStats {
     this.bounceBackPartsConverted += other.bounceBackPartsConverted;
     this.lightningPoints += other.lightningPoints;
     for (const ac of other.tossupCounts) {
-      this.addAnswerCount(ac);
+      addAnswerCount(this.tossupCounts, ac);
     }
   }
 }
@@ -731,7 +721,7 @@ export class PlayerStats {
     this.gamesPlayed += mp.tossupsHeard / tossupsRead;
     this.tossupsHeard += mp.tossupsHeard;
     for (const ac of mp.answerCounts) {
-      this.addAnswerCount(ac);
+      addAnswerCount(this.tossupCounts, ac);
     }
   }
 
@@ -741,19 +731,6 @@ export class PlayerStats {
       return;
     }
     this.matches.push({ match, whichTeam, matchPlayer, round, phase });
-  }
-
-  private addAnswerCount(answerCount: PlayerAnswerCount) {
-    const tc = this.tossupCounts.find((ac) => ac.answerType.value === answerCount.answerType.value);
-    if (!tc) {
-      this.tossupCounts.push(new PlayerAnswerCount(answerCount.answerType, answerCount.number));
-      return;
-    }
-    if (tc.number === undefined) {
-      tc.number = answerCount.number;
-    } else {
-      tc.number += answerCount.number || 0;
-    }
   }
 }
 
@@ -873,23 +850,10 @@ export class RoundStats {
       for (const matchPlayer of matchTeam.matchPlayers) {
         for (const answerCount of matchPlayer.answerCounts) {
           if (answerCount.number !== undefined) {
-            this.addAnswerCount(answerCount);
+            addAnswerCount(this.tossupCounts, answerCount);
           }
         }
       }
-    }
-  }
-
-  private addAnswerCount(answerCount: PlayerAnswerCount) {
-    const tc = this.tossupCounts.find((ac) => ac.answerType.value === answerCount.answerType.value);
-    if (!tc) {
-      this.tossupCounts.push(new PlayerAnswerCount(answerCount.answerType, answerCount.number));
-      return;
-    }
-    if (tc.number === undefined) {
-      tc.number = answerCount.number;
-    } else {
-      tc.number += answerCount.number || 0;
     }
   }
 }

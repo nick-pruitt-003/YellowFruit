@@ -115,6 +115,37 @@ export function YfNumericField({ onWheel, ...rest }: TextFieldProps) {
   return <TextField {...rest} type="number" onWheel={composedOnWheel} />;
 }
 
+interface IYfNameFieldProps {
+  value: string;
+  error: string;
+  onChange: (newValue: string) => void;
+  /** Write the current value back to the data model */
+  onCommit: () => void;
+}
+
+/** The "Name" text box used by the edit dialogs, which saves on blur or Enter */
+export function YfNameField({ value, error, onChange, onCommit }: IYfNameFieldProps) {
+  return (
+    <TextField
+      sx={{ marginTop: 1 }}
+      fullWidth
+      autoFocus
+      spellCheck={false}
+      variant="outlined"
+      size="small"
+      label="Name"
+      error={error !== ''}
+      helperText={error || ' '}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit();
+      }}
+    />
+  );
+}
+
 export const YfAcceptButton = forwardRef((props: ButtonProps, buttonRef: React.ForwardedRef<HTMLButtonElement>) => {
   const { ...other } = props;
   return (

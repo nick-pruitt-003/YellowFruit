@@ -29,7 +29,7 @@ import React, { ReactElement, forwardRef, useContext, useEffect, useMemo, useRef
 import { useHotkeys } from 'react-hotkeys-hook';
 import { ArrowDropDown, Delete } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import { TeamEditModalContext } from '../Modal Managers/TempTeamManager';
 import { Team } from '../DataModel/Team';
 import { ValidationStatuses } from '../DataModel/Interfaces';
@@ -37,13 +37,7 @@ import { hotkeyFormat, YfAcceptButton, YfCancelButton } from '../Utils/GeneralRe
 
 function TeamEditDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.teamModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.teamModalManager);
 
   return (
     <TeamEditModalContext.Provider value={mgr}>

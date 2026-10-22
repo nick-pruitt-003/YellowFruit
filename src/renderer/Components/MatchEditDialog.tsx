@@ -30,7 +30,7 @@ import Grid from '@mui/material/Grid';
 import { DragIndicator, ExpandMore, Restore, VisibilityOff } from '@mui/icons-material';
 import { MatchEditModalContext } from '../Modal Managers/TempMatchManager';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import {
   CollapsibleArea,
   ExpandButton,
@@ -51,13 +51,7 @@ import { BonusTrackingMode } from '../DataModel/ScoringRules';
 
 export default function MatchEditDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.matchModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.matchModalManager);
 
   return (
     <MatchEditModalContext.Provider value={mgr}>

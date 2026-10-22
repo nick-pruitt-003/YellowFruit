@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useRef } from 'react';
 import {
   Box,
   Button,
@@ -9,7 +9,6 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -19,8 +18,8 @@ import Grid from '@mui/material/Grid';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Delete, HelpOutlined } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
-import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
+import { YfAcceptButton, YfCancelButton, YfNameField, YfNumericField } from '../Utils/GeneralReactUtils';
 import { PoolEditModalContext } from '../Modal Managers/TempPoolManager';
 
 const carryoverFieldTooltip =
@@ -28,13 +27,7 @@ const carryoverFieldTooltip =
 
 export default function PoolEditDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.poolModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.poolModalManager);
 
   return (
     <PoolEditModalContext.Provider value={mgr}>
@@ -115,29 +108,7 @@ function PoolNameField() {
   const [name, setName] = useSubscription(modalManager.poolName);
   const [error] = useSubscription(modalManager.poolNameError);
 
-  const onBlur = () => {
-    modalManager.setPoolName(name);
-  };
-
-  return (
-    <TextField
-      sx={{ marginTop: 1 }}
-      fullWidth
-      autoFocus
-      spellCheck={false}
-      variant="outlined"
-      size="small"
-      label="Name"
-      error={error !== ''}
-      helperText={error || ' '}
-      value={name}
-      onChange={(e) => setName(e.target.value)}
-      onBlur={onBlur}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') onBlur();
-      }}
-    />
-  );
+  return <YfNameField value={name} error={error} onChange={setName} onCommit={() => modalManager.setPoolName(name)} />;
 }
 
 function NumberOfTeamsField() {

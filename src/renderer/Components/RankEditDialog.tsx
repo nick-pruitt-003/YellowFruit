@@ -1,20 +1,14 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useRef } from 'react';
 import { Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
 import { RankEditModalContext } from '../Modal Managers/TempRankManager';
 
 export default function RankEditDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.rankModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.rankModalManager);
 
   return (
     <RankEditModalContext.Provider value={mgr}>

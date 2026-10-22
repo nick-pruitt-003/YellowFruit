@@ -1,20 +1,14 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import { useContext, useState, useEffect } from 'react';
+import { useContext } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { GenericModalContext } from '../Modal Managers/GenericModalManager';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import { hotkeyFormat } from '../Utils/GeneralReactUtils';
 
 export default function GenericDialog() {
   const curTournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(curTournManager.genericModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => curTournManager.genericModalManager);
 
   return (
     <GenericModalContext.Provider value={mgr}>

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useRef } from 'react';
 import {
   Alert,
   Checkbox,
@@ -8,7 +8,6 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -16,8 +15,8 @@ import Grid from '@mui/material/Grid';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { TournamentContext } from '../TournamentManager';
 import { PhaseEditModalContext } from '../Modal Managers/TempPhaseManager';
-import useSubscription from '../Utils/CustomHooks';
-import { YfAcceptButton, YfCancelButton, YfNumericField } from '../Utils/GeneralReactUtils';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
+import { YfAcceptButton, YfCancelButton, YfNameField, YfNumericField } from '../Utils/GeneralReactUtils';
 import { PhaseTypes } from '../DataModel/Phase';
 
 const phaseTypeDisplayName = {
@@ -29,13 +28,7 @@ const phaseTypeDisplayName = {
 
 export default function PhaseEditDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.phaseModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.phaseModalManager);
 
   return (
     <PhaseEditModalContext.Provider value={mgr}>
@@ -94,28 +87,8 @@ function PhaseNameField() {
   const [name, setName] = useSubscription(modalManager.phaseName);
   const [error] = useSubscription(modalManager.phaseNameError);
 
-  const onBlur = () => {
-    modalManager.setPhaseName(name);
-  };
-
   return (
-    <TextField
-      sx={{ marginTop: 1 }}
-      fullWidth
-      spellCheck={false}
-      autoFocus
-      variant="outlined"
-      size="small"
-      label="Name"
-      error={error !== ''}
-      helperText={error || ' '}
-      value={name}
-      onChange={(e) => setName(e.target.value)}
-      onBlur={onBlur}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') onBlur();
-      }}
-    />
+    <YfNameField value={name} error={error} onChange={setName} onCommit={() => modalManager.setPhaseName(name)} />
   );
 }
 

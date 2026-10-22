@@ -1,4 +1,4 @@
-import { ChangeEvent, useContext, useEffect, useState } from 'react';
+import { ChangeEvent, useContext } from 'react';
 import {
   Alert,
   Checkbox,
@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import { YfAcceptButton, YfCancelButton } from '../Utils/GeneralReactUtils';
 import { SqbsExportModalContext } from '../Modal Managers/SqbsExportModalManager';
 import { Phase } from '../DataModel/Phase';
@@ -31,13 +31,7 @@ const radioKeyCombFiles = 'one-file';
 
 export default function SqbsExportDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.sqbsExportModalManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.sqbsExportModalManager);
 
   return (
     <SqbsExportModalContext.Provider value={mgr}>

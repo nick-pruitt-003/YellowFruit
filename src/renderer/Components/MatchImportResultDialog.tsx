@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useRef } from 'react';
 import {
   Alert,
   Box,
@@ -18,7 +18,7 @@ import {
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Cancel, Close, Upload } from '@mui/icons-material';
 import { TournamentContext } from '../TournamentManager';
-import useSubscription from '../Utils/CustomHooks';
+import useSubscription, { useModalManager } from '../Utils/CustomHooks';
 import { YfAcceptButton, YfCancelButton } from '../Utils/GeneralReactUtils';
 import { MatchImportResultsModalContext } from '../Modal Managers/MatchImportResultsManager';
 import MatchImportResult, { ImportResultStatus } from '../DataModel/MatchImportResult';
@@ -26,13 +26,7 @@ import { getFileNameFromPath } from '../Utils/GeneralUtils';
 
 export default function MatchImportResultDialog() {
   const tournManager = useContext(TournamentContext);
-  const [, setUpdateNeeded] = useState({}); // set this object to a new object whenever we want to force a re-render
-  const [mgr] = useState(tournManager.matchImportResultsManager);
-  useEffect(() => {
-    mgr.dataChangedReactCallback = () => {
-      setUpdateNeeded({});
-    };
-  }, [mgr]);
+  const mgr = useModalManager(() => tournManager.matchImportResultsManager);
 
   return (
     <MatchImportResultsModalContext.Provider value={mgr}>
