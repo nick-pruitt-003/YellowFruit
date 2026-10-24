@@ -109,9 +109,10 @@ function NavBar(props: INavBarProps) {
                     py: 2.5,
                     color: 'white',
                     display: 'block',
-                    backgroundColor: page === activePage ? '#ffffff30' : 'transparent',
+                    // darkened active tab, like the YellowFruit 2/3 nav bar
+                    backgroundColor: page === activePage ? 'rgba(0, 0, 0, 0.1)' : 'transparent',
                     borderRadius: 0,
-                    '&:hover': { backgroundColor: '#ffffff30' },
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
                   }}
                 >
                   {pageNames[page]}
