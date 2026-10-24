@@ -13,7 +13,6 @@ const yfGold = '#946400';
 const mzInputBorder = '#9e9e9e';
 /** Materialize's background for toasts and tooltips */
 const mzDarkSurface = '#323232';
-
 // Materialize's .z-depth-* shadows
 const mzDepth1 =
   '0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2)';
@@ -150,6 +149,39 @@ const yfTheme = createTheme({
       styleOverrides: {
         root: {
           '&.Mui-focused:not(.Mui-error)': { color: yfGold },
+        },
+      },
+    },
+    // Outlined labels float on the box's top border. With that border gone they would sit on top of whatever is
+    // above the field, so in labelled fields the floated label moves into the field's own top padding and the text
+    // shifts down to make room. Heights don't change, so labelled and unlabelled fields in a row still line up.
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          '&:has(> .MuiInputLabel-outlined)': {
+            '& .MuiOutlinedInput-input:not(.MuiAutocomplete-input), & .MuiPickersSectionList-root': {
+              paddingTop: 22,
+              paddingBottom: 11,
+            },
+            '& .MuiAutocomplete-inputRoot': { paddingTop: 14.5, paddingBottom: 3.5 },
+          },
+          '&:has(> .MuiInputLabel-outlined.MuiInputLabel-sizeSmall)': {
+            '& .MuiOutlinedInput-input:not(.MuiAutocomplete-input), & .MuiPickersSectionList-root': {
+              paddingTop: 14,
+              paddingBottom: 3,
+            },
+            '& .MuiAutocomplete-inputRoot': { paddingTop: 11, paddingBottom: 1 },
+          },
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          '&.MuiInputLabel-outlined.MuiInputLabel-shrink': { transform: 'translate(14px, -1px) scale(0.75)' },
+          '&.MuiInputLabel-outlined.MuiInputLabel-shrink.MuiInputLabel-sizeSmall': {
+            transform: 'translate(14px, -4px) scale(0.75)',
+          },
         },
       },
     },
