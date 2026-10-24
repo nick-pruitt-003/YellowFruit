@@ -131,7 +131,6 @@ export function YfNameField({ value, error, onChange, onCommit }: IYfNameFieldPr
       fullWidth
       autoFocus
       spellCheck={false}
-      variant="outlined"
       size="small"
       label="Name"
       error={error !== ''}

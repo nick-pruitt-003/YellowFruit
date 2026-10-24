@@ -181,7 +181,6 @@ const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameF
           spellCheck={false}
           fullWidth
           autoFocus={autofocusOrgName}
-          variant="outlined"
           size="small"
           error={teamNameValidationStatus === ValidationStatuses.Error}
           helperText={warningExists ? teamNameValidationMsg : ' '}
@@ -198,7 +197,6 @@ const OrgAndLetterFields = forwardRef((props: TeamAndLetterFieldsProps, orgNameF
           sx={{ marginTop: 1, width: '10ch' }}
           placeholder="A, B, etc."
           spellCheck={false}
-          variant="outlined"
           size="small"
           error={teamLetter !== '' && teamNameValidationStatus === ValidationStatuses.Error}
           helperText={' '}
@@ -425,7 +423,6 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
           spellCheck={false}
           fullWidth
           autoFocus={autoFocus}
-          variant="outlined"
           size="small"
           error={nameValidationStatus === ValidationStatuses.Error}
           helperText={getHelperText(nameValidationMsg, warningExists)}
@@ -446,7 +443,6 @@ function PlayerGridRow(props: IPlayerGridRowProps) {
             placeholder="Grade / Yr."
             spellCheck={false}
             fullWidth
-            variant="outlined"
             size="small"
             error={yearValidationStatus === ValidationStatuses.Error}
             helperText={getHelperText(yearValidationMsg, warningExists)}

@@ -12,7 +12,7 @@ import {
   InputAdornment,
   List,
   ListItem,
-  OutlinedInput,
+  Input,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -222,8 +222,8 @@ function CustomPtValDialog(props: ICustomPtValDialogProps) {
       <DialogTitle>Add Point Value</DialogTitle>
       <Box sx={{ '& .MuiDialogContent-root': { paddingRight: 8 } }}>
         <DialogContent>
-          <FormControl sx={{ width: '15ch' }} variant="outlined">
-            <OutlinedInput
+          <FormControl sx={{ width: '15ch' }}>
+            <Input
               type="number"
               size="small"
               autoFocus

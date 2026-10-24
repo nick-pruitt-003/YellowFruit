@@ -128,7 +128,6 @@ function NumberOfTeamsField() {
     <YfNumericField
       sx={{ verticalAlign: 'baseline', width: '10ch' }}
       slotProps={{ htmlInput: { min: Math.max(1, numTeamsInPool), max: 999 } }}
-      variant="outlined"
       size="small"
       label="No. Teams"
       disabled={!allowCustomSched}
