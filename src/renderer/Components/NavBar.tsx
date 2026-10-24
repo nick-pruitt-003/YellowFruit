@@ -15,6 +15,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { ApplicationPages } from '../Enums';
 import { hotkeyFormat } from '../Utils/GeneralReactUtils';
 import getAppPageHelpText from './PageLevelHelpText';
+import { yfNavActiveTint } from '../YfTheme';
 
 // Display names for the buttons
 const pageNames = {
@@ -107,12 +108,11 @@ function NavBar(props: INavBarProps) {
                   sx={{
                     my: 0,
                     py: 2.5,
-                    color: 'white',
+                    color: 'inherit',
                     display: 'block',
-                    // darkened active tab, like the YellowFruit 2/3 nav bar
-                    backgroundColor: page === activePage ? 'rgba(0, 0, 0, 0.1)' : 'transparent',
+                    backgroundColor: page === activePage ? yfNavActiveTint : 'transparent',
                     borderRadius: 0,
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
+                    '&:hover': { backgroundColor: yfNavActiveTint },
                   }}
                 >
                   {pageNames[page]}

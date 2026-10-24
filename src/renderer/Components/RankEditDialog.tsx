@@ -68,7 +68,6 @@ function RankField() {
       sx={{ marginTop: 1, width: '15ch' }}
       slotProps={{ htmlInput: { min: 1 } }}
       autoFocus
-      variant="outlined"
       size="small"
       error={error !== ''}
       helperText={error || ' '}

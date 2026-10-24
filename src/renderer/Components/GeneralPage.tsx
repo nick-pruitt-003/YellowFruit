@@ -58,7 +58,6 @@ function GeneralInfoCard() {
           label="Tournament Name"
           spellCheck={false}
           fullWidth
-          variant="outlined"
           size="small"
           value={tournName}
           onChange={(e) => setTournName(e.target.value)}
@@ -71,7 +70,6 @@ function GeneralInfoCard() {
           label="Tournament Location"
           spellCheck={false}
           fullWidth
-          variant="outlined"
           size="small"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
@@ -116,7 +114,6 @@ function QuestionSetCard() {
           label="Question Set"
           spellCheck={false}
           fullWidth
-          variant="outlined"
           size="small"
           value={qsetName}
           onChange={(e) => setQsetName(e.target.value)}

@@ -1,4 +1,5 @@
 import { createTheme, Shadows } from '@mui/material/styles';
+import { red } from '@mui/material/colors';
 import type {} from '@mui/x-date-pickers/themeAugmentation';
 
 // Styled after Materialize 1.0, which YellowFruit 2.x/3.x was built on. Values come from its Sass sources.
@@ -13,6 +14,10 @@ const yfGold = '#946400';
 const mzInputBorder = '#9e9e9e';
 /** Materialize's background for toasts and tooltips */
 const mzDarkSurface = '#323232';
+/** MUI's default error.main, for the error-state underline glow */
+const errorRed = red[700];
+/** Active and hovered nav bar page, darkened like the YellowFruit 2/3 nav bar */
+export const yfNavActiveTint = 'rgba(0, 0, 0, 0.1)';
 // Materialize's .z-depth-* shadows
 const mzDepth1 =
   '0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2)';
@@ -36,36 +41,11 @@ function mzShadows(): Shadows {
   }) as Shadows;
 }
 
-/** Materialize text inputs have only a bottom border, which gains a 1px glow on focus */
-const underlineInputOverrides = {
-  root: {
-    borderRadius: 0,
-    '& .MuiOutlinedInput-notchedOutline, & .MuiPickersOutlinedInput-notchedOutline': {
-      borderWidth: '0 0 1px 0',
-      borderColor: mzInputBorder,
-      borderRadius: 0,
-      transition: 'box-shadow .3s, border-color .3s',
-    },
-    '&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline, &:hover:not(.Mui-disabled):not(.Mui-error) .MuiPickersOutlinedInput-notchedOutline':
-      {
-        borderColor: 'rgba(0, 0, 0, 0.87)',
-      },
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline, &.Mui-focused .MuiPickersOutlinedInput-notchedOutline': {
-      borderWidth: '0 0 1px 0',
-      borderColor: yfYellow,
-      boxShadow: `0 1px 0 0 ${yfYellow}`,
-    },
-    '&.Mui-error .MuiOutlinedInput-notchedOutline, &.Mui-error .MuiPickersOutlinedInput-notchedOutline': {
-      boxShadow: 'none',
-    },
-    '&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline, &.Mui-error.Mui-focused .MuiPickersOutlinedInput-notchedOutline':
-      {
-        boxShadow: '0 1px 0 0 currentColor',
-      },
-    '&.Mui-disabled .MuiOutlinedInput-notchedOutline, &.Mui-disabled .MuiPickersOutlinedInput-notchedOutline': {
-      borderStyle: 'dotted',
-    },
-  },
+/** Materialize text inputs are an underline that gains a 1px glow on focus, instead of MUI's 2px bar */
+const underlineOverrides = {
+  '&::before': { borderBottomColor: mzInputBorder },
+  '&::after': { borderBottomWidth: 1, boxShadow: `0 1px 0 0 ${yfYellow}` },
+  '&.Mui-error::after': { boxShadow: `0 1px 0 0 ${errorRed}` },
 };
 
 const yfTheme = createTheme({
@@ -73,7 +53,8 @@ const yfTheme = createTheme({
     primary: {
       main: yfYellow,
       light: yfYellowLight,
-      dark: yfGold,
+      // MUI uses this as the hover background of contained buttons, so it stays a yellow; text uses yfGold directly
+      dark: '#f57f17',
       contrastText: 'rgba(0, 0, 0, 0.87)',
     },
   },
@@ -115,7 +96,10 @@ const yfTheme = createTheme({
       styleOverrides: {
         root: {
           letterSpacing: '.5px',
-          '&.Mui-selected': { color: yfGold },
+          variants: [
+            { props: { color: 'standard' }, style: { '&.Mui-selected': { color: yfGold } } },
+            { props: { color: 'primary' }, style: { '&.Mui-selected': { color: yfGold } } },
+          ],
         },
       },
     },
@@ -130,58 +114,20 @@ const yfTheme = createTheme({
     MuiDialogActions: {
       styleOverrides: {
         // Materialize's modal footer
-        root: { backgroundColor: '#fafafa', padding: '4px 6px' },
+        root: { backgroundColor: '#fafafa' },
       },
     },
-    MuiOutlinedInput: { styleOverrides: underlineInputOverrides },
-    MuiPickersOutlinedInput: { styleOverrides: underlineInputOverrides },
-    MuiInput: {
-      styleOverrides: {
-        // standard-variant fields: Materialize keeps a 1px line plus a glow on focus instead of MUI's 2px bar
-        underline: {
-          '&::before': { borderBottomColor: mzInputBorder },
-          '&::after': { borderBottomWidth: 1, boxShadow: `0 1px 0 0 ${yfYellow}` },
-          '&.Mui-error::after': { boxShadow: '0 1px 0 0 currentColor' },
-        },
-      },
-    },
+    // Materialize fields are an underline with the label above the text: MUI's standard variant
+    MuiTextField: { defaultProps: { variant: 'standard' } },
+    MuiFormControl: { defaultProps: { variant: 'standard' } },
+    MuiSelect: { defaultProps: { variant: 'standard' } },
+    MuiPickersTextField: { defaultProps: { variant: 'standard' } },
+    MuiInput: { styleOverrides: { underline: underlineOverrides } },
+    MuiPickersInput: { styleOverrides: { root: underlineOverrides } },
     MuiFormLabel: {
       styleOverrides: {
         root: {
           '&.Mui-focused:not(.Mui-error)': { color: yfGold },
-        },
-      },
-    },
-    // Outlined labels float on the box's top border. With that border gone they would sit on top of whatever is
-    // above the field, so in labelled fields the floated label moves into the field's own top padding and the text
-    // shifts down to make room. Heights don't change, so labelled and unlabelled fields in a row still line up.
-    MuiFormControl: {
-      styleOverrides: {
-        root: {
-          '&:has(> .MuiInputLabel-outlined)': {
-            '& .MuiOutlinedInput-input:not(.MuiAutocomplete-input), & .MuiPickersSectionList-root': {
-              paddingTop: 22,
-              paddingBottom: 11,
-            },
-            '& .MuiAutocomplete-inputRoot': { paddingTop: 14.5, paddingBottom: 3.5 },
-          },
-          '&:has(> .MuiInputLabel-outlined.MuiInputLabel-sizeSmall)': {
-            '& .MuiOutlinedInput-input:not(.MuiAutocomplete-input), & .MuiPickersSectionList-root': {
-              paddingTop: 14,
-              paddingBottom: 3,
-            },
-            '& .MuiAutocomplete-inputRoot': { paddingTop: 11, paddingBottom: 1 },
-          },
-        },
-      },
-    },
-    MuiInputLabel: {
-      styleOverrides: {
-        root: {
-          '&.MuiInputLabel-outlined.MuiInputLabel-shrink': { transform: 'translate(14px, -1px) scale(0.75)' },
-          '&.MuiInputLabel-outlined.MuiInputLabel-shrink.MuiInputLabel-sizeSmall': {
-            transform: 'translate(14px, -4px) scale(0.75)',
-          },
         },
       },
     },

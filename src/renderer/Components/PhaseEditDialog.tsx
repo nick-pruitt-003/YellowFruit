@@ -116,7 +116,6 @@ function PhaseRoundFields() {
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
           slotProps={{ htmlInput: { min: 1, max: 999 } }}
-          variant="outlined"
           size="small"
           value={firstRound}
           onChange={(e) => setFirstRound(e.target.value)}
@@ -129,7 +128,6 @@ function PhaseRoundFields() {
         <YfNumericField
           sx={{ verticalAlign: 'baseline', width: '8ch' }}
           slotProps={{ htmlInput: { min: 1, max: 999 } }}
-          variant="outlined"
           size="small"
           value={lastRound}
           onChange={(e) => setLastRound(e.target.value)}

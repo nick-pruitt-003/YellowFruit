@@ -114,14 +114,15 @@ function MatchEditDialogCore() {
                 <TuhTotalField ref={tuhTotFieldRef} />
               </Grid>
               {/** second row */}
-              <Grid size={{ xs: 9, md: 3, lg: 4 }}>
+              {/* the team selects have no label: pad by the standard label's 16px so they line up with the score fields */}
+              <Grid size={{ xs: 9, md: 3, lg: 4 }} sx={{ pt: 2 }}>
                 <TeamSelect whichTeam="left" />
               </Grid>
               <Grid size={{ xs: 3, md: 2, lg: 1 }}>
                 <TeamScoreField whichTeam="left" />
               </Grid>
               <Grid size={{ md: 1 }} sx={{ display: { xs: 'none', md: 'inherit' } }} />
-              <Grid size={{ xs: 9, md: 3, lg: 4 }}>
+              <Grid size={{ xs: 9, md: 3, lg: 4 }} sx={{ pt: 2 }}>
                 <TeamSelect whichTeam="right" />
               </Grid>
               <Grid size={{ xs: 3, md: 2, lg: 1 }}>
@@ -222,7 +223,6 @@ function RoundField() {
       slotProps={{ htmlInput: { min: 1 } }}
       label="Round"
       fullWidth
-      variant="outlined"
       size="small"
       autoFocus={roundNo === '' && !disabled}
       disabled={disabled}
@@ -246,7 +246,6 @@ function MainPhaseField() {
     <TextField
       label="Stage"
       fullWidth
-      variant="outlined"
       size="small"
       slotProps={{ htmlInput: { readOnly: true } }}
       helperText={' '}
@@ -327,7 +326,6 @@ const TuhTotalField = ({ ref }: { ref?: Ref<HTMLInputElement> }) => {
       slotProps={{ htmlInput: { min: 1 } }}
       label="TU Read (incl. OT)"
       fullWidth
-      variant="outlined"
       size="small"
       autoFocus={thisTournament.scoringRules.timed && roundExists}
       disabled={forfeit}
@@ -429,7 +427,6 @@ function TeamScoreField(props: ITeamScoreProps) {
       slotProps={{ htmlInput: { step: divisor } }}
       label="Score"
       fullWidth
-      variant="outlined"
       size="small"
       disabled={forfeit}
       error={valStatus === ValidationStatuses.Error}
@@ -952,7 +949,6 @@ function OvertimeTuReadField() {
       slotProps={{ htmlInput: { min: 0 } }}
       label="TU Read"
       fullWidth
-      variant="outlined"
       size="small"
       value={otTUH}
       onChange={(e) => handleChange(e.target.value)}
@@ -1000,7 +996,6 @@ function NotesCard() {
           spellCheck={false}
           rows={4}
           fullWidth
-          variant="outlined"
           size="small"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
