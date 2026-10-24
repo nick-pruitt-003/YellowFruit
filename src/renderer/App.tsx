@@ -7,6 +7,7 @@ import '@fontsource/roboto/700.css';
 import './App.css';
 
 import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import Box from '@mui/material/Box';
@@ -34,6 +35,7 @@ import PoolAssignmentDialog from './Components/PoolAssignmentDialog';
 import MatchImportResultDialog from './Components/MatchImportResultDialog';
 import SqbsExportDialog from './Components/SqbsExportDialog';
 import AboutYfDialog from './Components/AboutYfDialog';
+import yfTheme from './YfTheme';
 
 window.onerror = () => window.electron.ipcRenderer.sendMessage(IpcRendToMain.WebPageCrashed);
 // Only needed in dev: HMR re-evaluates this module, which would otherwise
@@ -65,14 +67,14 @@ function YellowFruit() {
   }, [mgr]);
 
   return (
-    <>
+    <ThemeProvider theme={yfTheme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <TournamentContext.Provider value={mgr}>
           <TournamentEditor />
         </TournamentContext.Provider>
       </LocalizationProvider>
-    </>
+    </ThemeProvider>
   );
 }
 
