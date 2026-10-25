@@ -41,11 +41,14 @@ function mzShadows(): Shadows {
   }) as Shadows;
 }
 
-/** Materialize text inputs are an underline that gains a 1px glow on focus, instead of MUI's 2px bar */
+/**
+ * Materialize text inputs are an underline that gains a 1px glow on focus, instead of MUI's 2px bar.
+ * Gold rather than yellow so the focus line meets 3:1 contrast on white.
+ */
 const underlineOverrides = {
   '&::before': { borderBottomColor: mzInputBorder },
-  '&::after': { borderBottomWidth: 1, boxShadow: `0 1px 0 0 ${yfYellow}` },
-  '&.Mui-error::after': { boxShadow: `0 1px 0 0 ${errorRed}` },
+  '&::after': { borderBottomWidth: 1, borderBottomColor: yfGold, boxShadow: `0 1px 0 0 ${yfGold}` },
+  '&.Mui-error::after': { borderBottomColor: errorRed, boxShadow: `0 1px 0 0 ${errorRed}` },
 };
 
 const yfTheme = createTheme({
