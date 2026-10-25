@@ -86,7 +86,7 @@ const autoSaveIntervalMS = 120000; // 2 minutes
 
 const createWindow = async () => {
   // Opt-in: Electron can't start React DevTools' MV3 service worker, so loading it on every
-  // dev launch only logs errors. Run `REACT_DEVTOOLS=1 npm start` when you need it.
+  // dev launch only logs errors. Run `npx cross-env REACT_DEVTOOLS=1 npm start` when you need it.
   if (isDebug && (process.env.REACT_DEVTOOLS === '1' || process.env.REACT_DEVTOOLS === 'true')) {
     await installExtensions();
   }
