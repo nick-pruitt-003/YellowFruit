@@ -86,6 +86,32 @@ fn cmd_dump(out_dir: &str, files: &[String]) -> ExitCode {
                         // What File > Save writes, computed before the stats as in the oracle
                         let saved = yf_core::writer::save_yft(&loaded.tournament);
                         let mut d = dump::dump_tournament(&mut loaded.tournament);
+                        let mut exports = serde_json::Map::new();
+                        match yf_core::writer::export_qbj(&loaded.tournament) {
+                            Ok(q) => exports.insert("qbj".into(), json!(q)),
+                            Err(e) => exports.insert("qbj".into(), json!({ "error": e })),
+                        };
+                        let t = &loaded.tournament;
+                        let sqbs = |phases: &[usize]| match yf_core::sqbs::generate_sqbs(t, phases) {
+                            Ok(c) => json!({ "contents": c }),
+                            Err(e) => json!({ "error": e }),
+                        };
+                        let all: Vec<usize> = (0..t.phases.len()).collect();
+                        exports.insert("sqbsAll".into(), if all.is_empty() { json!({ "error": "no stages" }) } else { sqbs(&all) });
+                        if all.len() > 1 {
+                            let per: Vec<Value> = all
+                                .iter()
+                                .map(|p| {
+                                    let mut v = sqbs(&[*p]);
+                                    let mut o = serde_json::Map::new();
+                                    o.insert("stage".into(), json!(t.phases[*p].name));
+                                    o.extend(v.as_object_mut().unwrap().clone());
+                                    Value::Object(o)
+                                })
+                                .collect();
+                            exports.insert("sqbsPerStage".into(), json!(per));
+                        }
+                        d["exports"] = Value::Object(exports);
                         if format == yf_core::Format::Yft {
                             d["parserWarnings"] = json!(loaded.warnings);
                         }
@@ -129,6 +155,7 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
         return ExitCode::from(2);
     };
     let (mut same, mut both_fail, mut differ) = (0, 0, 0);
+    let mut not_ported = std::collections::BTreeSet::new();
     for entry in &manifest {
         let ts_out = entry["out"].as_str().unwrap_or("");
         let rs_out = ts_out.replace(".ts.json", ".rs.json");
@@ -166,6 +193,18 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
             for k in TS_ONLY_KEYS {
                 o.remove(*k);
             }
+            // Exports yf-core doesn't produce yet are skipped (and listed in the summary), not counted as diffs
+            if let Some(Value::Object(ex)) = o.get_mut("exports") {
+                let rs_has = |k: &str| rs.get("exports").and_then(|e| e.get(k)).is_some();
+                let missing: Vec<String> = ex.keys().filter(|k| !rs_has(k)).cloned().collect();
+                for k in missing {
+                    ex.remove(&k);
+                    not_ported.insert(k);
+                }
+            }
+            if o.get("exports").is_some_and(|e| e.as_object().is_some_and(|m| m.is_empty())) && rs.get("exports").is_none() {
+                o.remove("exports");
+            }
         }
         let mut diffs = vec![];
         // The saved file must match byte for byte; report where the parsed JSON first differs
@@ -202,6 +241,9 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
         "\n{} files: {same} identical, {both_fail} fail to load in both, {differ} differ",
         manifest.len()
     );
+    if !not_ported.is_empty() {
+        println!("not compared yet (no Rust output): {}", not_ported.into_iter().collect::<Vec<_>>().join(", "));
+    }
     if differ > 0 {
         ExitCode::from(1)
     } else {

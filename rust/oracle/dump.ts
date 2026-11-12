@@ -65,8 +65,8 @@ async function main() {
 
   /** TournamentManager.generateWholeFileObj + makeJSON */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function saveYft(t: any) {
-    const whole = { version: '2.1.1', objects: [t.toFileObject(false, true)] };
+  function saveYft(t: any, qbjOnly = false) {
+    const whole = { version: '2.1.1', objects: [t.toFileObject(qbjOnly, true)] };
     camelCaseToSnakeCase(whole as unknown as Record<string, unknown>);
     return JSON.stringify(whole, (key, value) => {
       if (isNameOfDateField(key)) {
@@ -75,6 +75,45 @@ async function main() {
       }
       return value;
     });
+  }
+
+  const { default: SqbsGenerator } = await import(`${DM}/SqbsFileGeneration`);
+
+  /** What File > Export writes: QBJ (exportQbjFile), SQBS (generateSqbsFiles) and the HTML stat report (generateHtmlReport) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function exports(t: any) {
+    // SQBS: one file for all stages, plus one per stage when there's more than one (the export dialog's two choices)
+    const sqbs = (phases: unknown[]) => {
+      const gen = new SqbsGenerator(t);
+      gen.generateFile(phases);
+      return gen.errorMessage !== '' ? { error: gen.errorMessage } : { contents: gen.fileOutput };
+    };
+    const sqbsAll = t.phases.length === 0 ? { error: 'no stages' } : sqbs(t.phases);
+    const perStageGen = new SqbsGenerator(t);
+    const sqbsPerStage =
+      t.phases.length > 1
+        ? t.phases.map((ph: { name: string }) => {
+            perStageGen.generateFile([ph]);
+            return perStageGen.errorMessage !== ''
+              ? { stage: ph.name, error: perStageGen.errorMessage }
+              : { stage: ph.name, contents: perStageGen.fileOutput };
+          })
+        : undefined;
+
+    // HTML: as exported to files (prefix "report") and as shown in the app's Stat Report tab (no prefix)
+    const html = async (prefix?: string) => {
+      await t.setHtmlFilePrefix(prefix);
+      t.compileStats(true);
+      return {
+        standings: await t.makeHtmlStandings(),
+        individuals: await t.makeHtmlIndividuals(),
+        scoreboard: await t.makeHtmlScoreboard(),
+        teamDetails: await t.makeHtmlTeamDetail(),
+        playerDetails: await t.makeHtmlPlayerDetail(),
+        roundReport: await t.makeHtmlRoundReport(),
+      };
+    };
+    return { qbj: saveYft(t, true), sqbsAll, sqbsPerStage, htmlExport: await html('report'), htmlInApp: await html(undefined) };
   }
 
   const manifest: { file: string; out: string; format: string; error?: string }[] = [];
@@ -104,6 +143,7 @@ async function main() {
       // What File > Save writes (TournamentManager.saveYftFile)
       const saved = saveYft(tourn);
       dump = { ...dump, saved, ...dumpTournament(tourn) };
+      dump.exports = await exports(tourn);
 
       // Round trip: reopen the saved file as if after a relaunch, dump again, and save again
       Match.overrideIdCounter(1000);

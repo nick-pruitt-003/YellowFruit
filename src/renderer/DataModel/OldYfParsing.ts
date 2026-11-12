@@ -239,9 +239,9 @@ function parsePhaseStructure(
 ) {
   const maxRoundNumber = findMaxRoundNumber(oldYfGames);
   let prelimPhaseName = findPrelimPhase(oldYfGames);
-  const newPhaseList: Phase[] = [];
+  const ranges: IPhaseRange[] = [];
   let phaseCode = 0;
-   
+
   for (const phaseName in oldYfPhases) {
     if (!prelimPhaseName) prelimPhaseName = phaseName;
 
@@ -249,10 +249,15 @@ function parsePhaseStructure(
     phaseCode++;
     const [firstRound, lastRound] = findPhaseRoundRange(phaseName, oldYfGames, maxRoundNumber);
     if (firstRound === -1) continue;
+    ranges.push({ name: phaseName, phaseType, code: phaseCode.toString(), firstRound, lastRound, divisions: oldYfPhases[phaseName] });
+  }
+  coverUnassignedRounds(ranges, oldYfGames, maxRoundNumber, phaseCode + 1);
 
-    const newPhase = new Phase(phaseType, firstRound, lastRound, phaseCode.toString(), phaseName);
-    for (const divisionName of oldYfPhases[phaseName]) {
-      const teamsInPool = getTeamsInDivision(phaseName, divisionName, oldYfTeams);
+  const newPhaseList: Phase[] = [];
+  for (const r of ranges) {
+    const newPhase = new Phase(r.phaseType, r.firstRound, r.lastRound, r.code, r.name);
+    for (const divisionName of r.divisions) {
+      const teamsInPool = getTeamsInDivision(r.name, divisionName, oldYfTeams);
       const newPool = new Pool(teamsInPool.length, 1, divisionName, true); // just let everything allow carryover... I don't think we can reliably figure that out
       for (const team of teamsInPool) {
         const yfTeam = tourn.findTeamByName(team.teamName.trim());
@@ -266,6 +271,50 @@ function parsePhaseStructure(
     newPhaseList.push(newPhase);
   }
   return newPhaseList;
+}
+
+interface IPhaseRange {
+  name: string;
+  phaseType: PhaseTypes;
+  code: string;
+  firstRound: number;
+  lastRound: number;
+  divisions: string[];
+}
+
+/** Name of the stage created for files whose games aren't in any stage */
+const defaultPhaseName = 'Prelims';
+
+/**
+ * Old YF didn't require games to be in a stage, and stages here get their rounds from the games tagged with
+ * them. A round whose games mostly aren't in any one stage would otherwise belong to no stage, and all its
+ * games would be dropped. Put each such round in the stage before it (or after it, for rounds before the
+ * first stage), and if there are no stages at all, make one for every round.
+ */
+function coverUnassignedRounds(ranges: IPhaseRange[], oldYfGames: IOldYfGame[], maxRound: number, nextCode: number) {
+  const roundsWithGames = new Set(oldYfGames.map((g) => g.round).filter((r) => typeof r === 'number' && r > 0));
+  if (roundsWithGames.size === 0) return;
+  if (ranges.length === 0) {
+    ranges.push({
+      name: defaultPhaseName,
+      phaseType: PhaseTypes.Prelim,
+      code: nextCode.toString(),
+      firstRound: 1,
+      lastRound: maxRound,
+      divisions: [],
+    });
+    return;
+  }
+  for (let round = 1; round <= maxRound; round++) {
+    if (!roundsWithGames.has(round)) continue;
+    if (ranges.some((r) => r.firstRound <= round && round <= r.lastRound)) continue;
+    const before = ranges.filter((r) => r.lastRound < round);
+    if (before.length > 0) {
+      before.reduce((a, b) => (b.lastRound > a.lastRound ? b : a)).lastRound = round;
+    } else {
+      ranges.reduce((a, b) => (b.firstRound < a.firstRound ? b : a)).firstRound = round;
+    }
+  }
 }
 
 /** Guess at what the prelim phase is based on what phase round 1 games are in */

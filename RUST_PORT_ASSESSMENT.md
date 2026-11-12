@@ -97,6 +97,6 @@ Steps 1 and 3 are done, and step 2 is done except `.yft` serialize. Code is in `
 
 - CI (2026-11-12): `.github/workflows/parity.yml` runs the parity check on 11 anonymised samples in `rust/samples/`.
 
-Milestone 1 is done. The per-bug allow-list it planned for wasn't needed: every difference found was fixed on one side or the other.
+Milestone 1 is done. Milestone 2 has started: QBJ and SQBS exports match the app on all 122 files (see `rust/README.md`); the HTML report is next. The per-bug allow-list it planned for wasn't needed: every difference found was fixed on one side or the other.
 
 Milestone 2 (2–3 weeks) would add SQBS, QBJ and HTML report output, with byte-diffs against the TS output for the same files. Only after that, start the egui UI, beginning with the read-only pages (Teams standings, Games list) before the dialogs.

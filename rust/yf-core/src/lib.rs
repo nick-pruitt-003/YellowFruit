@@ -6,6 +6,7 @@ pub mod js;
 pub mod jsval;
 pub mod legacy;
 pub mod model;
+pub mod sqbs;
 pub mod stats;
 pub mod tournament;
 pub mod validation;

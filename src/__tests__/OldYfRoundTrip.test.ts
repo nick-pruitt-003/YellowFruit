@@ -136,3 +136,29 @@ test('reopenFileWithUntrimmedTeamIdAndBlankPlayer', () => {
   expect(summary(tourn).teams[0]).toEqual(['Alpha', ['Ann', 'Bob']]);
   expect(warnings).toEqual(['Team Alpha contains a player with no name, who was skipped.']);
 });
+
+/** Old YF didn't require stages: games could be in none, and files could define none */
+function oldYfFileWithStages(phases: object, gamePhases: string[][]) {
+  const lines = oldYfFile().split('\n');
+  lines[3] = JSON.stringify(phases);
+  const games = JSON.parse(lines[5]);
+  const extra = games.map((g: object, i: number) => ({ ...g, round: i + 3, phases: gamePhases[i] ?? [] }));
+  lines[5] = JSON.stringify([...games, ...extra]);
+  return lines.join('\n');
+}
+
+const matchCount = (t: Tournament) => t.phases.reduce((n, ph) => n + ph.getAllMatches().length, 0);
+
+test('oldYfFileWithNoStagesKeepsItsGames', () => {
+  const t = parseOldYfFile(oldYfFileWithStages({}, []));
+  expect(t.phases.map((ph) => ph.name)).toEqual(['Prelims']);
+  expect(matchCount(t)).toBe(4);
+});
+
+test('oldYfUntaggedRoundsJoinTheStageBefore', () => {
+  // rounds 1-2 are tagged Prelims; rounds 3-4 aren't in any stage
+  const t = parseOldYfFile(oldYfFileWithStages({ Prelims: ['Pool 1'] }, []));
+  expect(t.phases.length).toBe(1);
+  expect(t.phases[0].rounds.map((r) => r.number)).toEqual([1, 2, 3, 4]);
+  expect(matchCount(t)).toBe(4);
+});

@@ -39,6 +39,7 @@ Not covered, because no real file has them: old files from before YF 2.5, and ol
 - **Structure:** scoring rules, registrations, teams, rosters, seeds, phases, pools, rounds, packets, and every match: score, TUH, OT, carryover phases, whether it's omitted from stats, and the exact error and warning text from match validation.
 - **In-app standings:** `compileStats(false, true)`, i.e. per-phase pool standings with final-rank sorting.
 - **Stat report:** `compileStats(true)`, i.e. per-phase standings and individuals, prelims+playoffs, cumulative team, player and round-report stats. It includes the display strings (`ppg`, `ppb`, `winPct`, `gp`, bounceback %), not just raw numbers.
+- **Exports:** the QBJ export, the SQBS export (one file for all stages, and one per stage when there are several), and the six HTML report pages, both as exported to files and as shown in the app's Stat Report tab. The diff skips exports yf-core doesn't produce yet and lists them under "not compared yet".
 - **Saved file:** what File > Save writes (`saved`), compared byte for byte. Then the saved file is reopened and everything above is dumped again (`reloaded`), and `resaveIdentical` records whether saving the reopened file gives the same bytes. Each side reopens its own saved file.
 
 ## Status (2026-11-12)
@@ -52,6 +53,18 @@ Not covered, because no real file has them: old files from before YF 2.5, and ol
 | Fail in both apps | 17 | same failure: 9 old files with unescaped quotes in names (invalid JSON written by old YF), 6 that aren't YF4 files (MODAQ/qbj), 2 LIQBA seed files with inconsistent bonus settings plus 1 that crashes the TS parser |
 
 A mutation test confirmed the check catches real problems: swapping in Rust's default `{:.2}` for PPB makes 14 real files differ (8.125 shows as `8.13` in YF, `8.12` in Rust). The data has 463 such tie values in PPB and PPG.
+
+## Exports (milestone 2, in progress)
+
+| Export | Rust | Real files matching the app |
+|---|---|---|
+| QBJ (`writer::export_qbj`) | done | 122 of 122 |
+| SQBS (`sqbs::generate_sqbs`) | done | 122 of 122 (109 full exports, 51 per-stage exports, 13 files with no stages, which the app also refuses) |
+| HTML report | not started | — |
+
+Not covered by the real files: SQBS with bouncebacks or lightning rounds.
+
+**Old files with no stages lost their games.** Old YF didn't require stages, and the importer gives a stage only the rounds whose games are mostly tagged with it. 33 of the 116 old files define no stages, and 9 more have untagged rounds or a round split evenly between two stages: 733 games in 42 files were dropped on import. Now a round with games that no stage claims joins the stage before it (or after it, for rounds before the first stage), and a file with no stages gets one "Prelims" stage for every round. No game is dropped on any real file. Fixed in `OldYfParsing.ts` and `legacy.rs`, with tests in `OldYfRoundTrip.test.ts`.
 
 ## Save parity (2026-11-12)
 

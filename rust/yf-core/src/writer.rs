@@ -87,9 +87,19 @@ const QBJ_VERSION: &str = "2.1.1";
 /// Serialize the tournament the way File > Save does. Fails only on data the TS app would write
 /// differently in a way this port doesn't reproduce yet (non-ISO dates).
 pub fn save_yft(t: &Tournament) -> Result<String, String> {
+    write_file(t, false)
+}
+
+/// What File > Export > QBJ writes (`TournamentManager.exportQbjFile`): the same objects without
+/// YellowFruit's own `YfData`, and match teams give bonus points instead of a total
+pub fn export_qbj(t: &Tournament) -> Result<String, String> {
+    write_file(t, true)
+}
+
+fn write_file(t: &Tournament, qbj: bool) -> Result<String, String> {
     let mut whole = Obj::new();
     whole.set("version", Value::String(QBJ_VERSION.into()));
-    whole.set("objects", Value::Array(vec![tournament(t)?]));
+    whole.set("objects", Value::Array(vec![tournament(t, qbj)?]));
     let mut v = whole.done();
     camel_to_snake(&mut v);
     let mut out = String::new();
@@ -116,7 +126,7 @@ impl Obj {
         }
         self
     }
-    /// `{ YfData: yfData, ...this }`
+    /// `{ YfData: yfData, ...this }`, the .yft form; QBJ export leaves YfData out
     fn with_yf_data(self, yf: Obj) -> Obj {
         let mut o = Obj::new();
         o.set("YfData", yf.done());
@@ -127,6 +137,15 @@ impl Obj {
     }
     fn done(self) -> Value {
         Value::Object(self.0)
+    }
+}
+
+/// `qbjOnly ? qbjObject : { YfData: yfData, ...qbjObject }`
+fn finish(q: Obj, yf: Obj, qbj: bool) -> Value {
+    if qbj {
+        q.done()
+    } else {
+        q.with_yf_data(yf).done()
     }
 }
 
@@ -170,14 +189,14 @@ fn mod_truthy(a: f64, m: f64) -> bool {
 
 /* ------------------------------ model objects ------------------------------ */
 
-fn tournament(t: &Tournament) -> Result<Value, String> {
+fn tournament(t: &Tournament, qbj: bool) -> Result<Value, String> {
     let mut q = Obj::new();
     q.set("name", s(if t.name.is_empty() { "unnamed tournament" } else { &t.name }));
     q.opt("startDate", date(&t.start_date)?);
     q.opt("endDate", date(&t.end_date)?);
     q.opt("questionSet", nonempty(&t.question_set));
-    q.set("registrations", Value::Array(t.registrations.iter().map(|r| registration(t, r)).collect()));
-    q.set("phases", Value::Array(t.phases.iter().map(|ph| phase(t, ph)).collect()));
+    q.set("registrations", Value::Array(t.registrations.iter().map(|r| registration(t, r, qbj)).collect()));
+    q.set("phases", Value::Array(t.phases.iter().map(|ph| phase(t, ph, qbj)).collect()));
     let mut overall = Obj::new();
     overall.set("name", s(OVERALL_RANKING)).set("id", s(&format!("Ranking_{OVERALL_RANKING}")));
     q.set("rankings", Value::Array(vec![overall.done()]));
@@ -187,7 +206,7 @@ fn tournament(t: &Tournament) -> Result<Value, String> {
         site.set("name", s(&t.site_name));
         q.set("tournamentSite", site.done());
     }
-    q.set("scoringRules", scoring_rules(&t.scoring_rules));
+    q.set("scoringRules", scoring_rules(&t.scoring_rules, qbj));
 
     let mut yf = Obj::new();
     yf.set("YfVersion", s(&t.app_version));
@@ -200,7 +219,7 @@ fn tournament(t: &Tournament) -> Result<Value, String> {
     yf.set("trackDiv2", b(t.track_div2));
     yf.set("finalRankingsReady", b(t.finals_rankings_ready));
     yf.set("usingScheduleTemplate", b(t.using_schedule_template));
-    Ok(q.with_yf_data(yf).done())
+    Ok(finish(q, yf, qbj))
 }
 
 const OVERALL_RANKING: &str = "Overall";
@@ -283,19 +302,19 @@ fn dayjs_local(d: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     Some(local.with_timezone(&chrono::Utc))
 }
 
-fn registration(t: &Tournament, r: &Registration) -> Value {
+fn registration(t: &Tournament, r: &Registration, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&r.name));
-    q.set("teams", Value::Array(r.teams.iter().map(|tm| team(t, &t.teams[*tm])).collect()));
+    q.set("teams", Value::Array(r.teams.iter().map(|tm| team(t, &t.teams[*tm], qbj)).collect()));
     let mut yf = Obj::new();
     yf.set("isSmallSchool", b(r.is_small_school));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
-fn team(t: &Tournament, tm: &Team) -> Value {
+fn team(t: &Tournament, tm: &Team, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&tm.name));
-    q.set("players", Value::Array(tm.players.iter().map(|p| player(&t.players[*p])).collect()));
+    q.set("players", Value::Array(tm.players.iter().map(|p| player(&t.players[*p], qbj)).collect()));
     let mut rank = Obj::new();
     rank.set("ranking", ref_ptr(format!("Ranking_{OVERALL_RANKING}")));
     rank.opt("position", opt_num(tm.overall_rank));
@@ -303,17 +322,17 @@ fn team(t: &Tournament, tm: &Team) -> Value {
     q.set("id", s(&tm.id()));
     let mut yf = Obj::new();
     yf.set("letter", s(&tm.letter)).set("isJV", b(tm.is_jv)).set("isUG", b(tm.is_ug)).set("isD2", b(tm.is_d2));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
-fn player(p: &Player) -> Value {
+fn player(p: &Player, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&p.name));
     q.opt("year", player_year(&p.year_string).map(num));
     q.set("id", s(&player_id(p)));
     let mut yf = Obj::new();
     yf.set("yearString", s(&p.year_string)).set("isUG", b(p.is_ug)).set("isD2", b(p.is_d2));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
 pub fn player_id(p: &Player) -> String {
@@ -359,7 +378,7 @@ fn parse_non_numeric_year(text: &str) -> Option<f64> {
     SEARCH.iter().find(|(_, pre)| pre.iter().any(|p| lc.starts_with(p))).map(|(yr, _)| *yr)
 }
 
-fn scoring_rules(r: &ScoringRules) -> Value {
+fn scoring_rules(r: &ScoringRules, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&r.name));
     q.set("answerTypes", Value::Array(r.answer_types.iter().map(answer_type).collect()));
@@ -380,6 +399,9 @@ fn scoring_rules(r: &ScoringRules) -> Value {
     if r.use_lightning_rounds() {
         q.set("lightningDivisor", num(r.lightning_divisor));
     }
+    if qbj {
+        q.set("regulationTossupCount", num(r.regulation_tossup_count()));
+    }
     let mut yf = Obj::new();
     yf.set("timed", b(r.timed));
     yf.opt(
@@ -390,7 +412,7 @@ fn scoring_rules(r: &ScoringRules) -> Value {
             BonusTrackingMode::Manual => Some(s("Manual")),
         },
     );
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
 /// `ScoringRules.totalDivisor`
@@ -430,12 +452,12 @@ fn answer_type(at: &AnswerType) -> Value {
     q.done()
 }
 
-fn phase(t: &Tournament, ph: &Phase) -> Value {
+fn phase(t: &Tournament, ph: &Phase, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&ph.name));
     q.opt("description", nonempty(&ph.description));
-    q.set("rounds", Value::Array(ph.rounds.iter().map(|rd| round(t, rd)).collect()));
-    q.set("pools", Value::Array(ph.pools.iter().map(|p| pool(t, p)).collect()));
+    q.set("rounds", Value::Array(ph.rounds.iter().map(|rd| round(t, rd, qbj)).collect()));
+    q.set("pools", Value::Array(ph.pools.iter().map(|p| pool(t, p, qbj)).collect()));
     q.set("id", s(&phase_id(ph)));
     let mut yf = Obj::new();
     yf.set("phaseType", s(ph.phase_type.as_str()));
@@ -461,14 +483,14 @@ fn phase(t: &Tournament, ph: &Phase) -> Value {
         }),
     );
     yf.opt("forceNumericRounds", ph.force_numeric_rounds.map(b));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
 fn phase_id(ph: &Phase) -> String {
     format!("Phase_{}", ph.name)
 }
 
-fn pool(t: &Tournament, p: &Pool) -> Value {
+fn pool(t: &Tournament, p: &Pool, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&p.name));
     q.opt("description", nonempty(&p.description));
@@ -484,7 +506,7 @@ fn pool(t: &Tournament, p: &Pool) -> Value {
                     o.opt("position", opt_num(pt.position));
                     let mut yf = Obj::new();
                     yf.opt("didNotAdvance", pt.did_not_advance.map(b));
-                    o.with_yf_data(yf).done()
+                    finish(o, yf, qbj)
                 })
                 .collect(),
         ),
@@ -509,13 +531,13 @@ fn pool(t: &Tournament, p: &Pool) -> Value {
                 .collect(),
         ),
     );
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
-fn round(t: &Tournament, rd: &Round) -> Value {
+fn round(t: &Tournament, rd: &Round, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.set("name", s(&rd.name()));
-    q.set("matches", Value::Array(rd.matches.iter().map(|m| match_obj(t, m)).collect()));
+    q.set("matches", Value::Array(rd.matches.iter().map(|m| match_obj(t, m, qbj)).collect()));
     if !rd.packet_name.is_empty() {
         let mut pk = Obj::new();
         pk.set("name", s(&rd.packet_name));
@@ -524,12 +546,12 @@ fn round(t: &Tournament, rd: &Round) -> Value {
     let mut yf = Obj::new();
     yf.set("number", num(rd.number));
     yf.opt("nonNumericName", opt_s(&rd.name));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
-fn match_obj(t: &Tournament, m: &Match) -> Value {
+fn match_obj(t: &Tournament, m: &Match, qbj: bool) -> Value {
     let mut q = Obj::new();
-    q.set("matchTeams", Value::Array(vec![match_team(t, &m.left), match_team(t, &m.right)]));
+    q.set("matchTeams", Value::Array(vec![match_team(t, &m.left, qbj), match_team(t, &m.right, qbj)]));
     q.set(
         "carryoverPhases",
         Value::Array(m.carryover_phases.iter().map(|p| ref_ptr(phase_id(&t.phases[*p]))).collect()),
@@ -547,7 +569,7 @@ fn match_obj(t: &Tournament, m: &Match) -> Value {
     let mut yf = Obj::new();
     yf.set("otherValidation", validation(&m.modal_bottom_validation));
     yf.opt("importedFile", opt_s(&m.imported_file));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
 /// `Match.id`
@@ -588,11 +610,16 @@ fn letters_digits_marks(s: &str) -> Vec<char> {
         .collect()
 }
 
-fn match_team(t: &Tournament, mt: &MatchTeam) -> Value {
+fn match_team(t: &Tournament, mt: &MatchTeam, qbj: bool) -> Value {
     let mut q = Obj::new();
     q.opt("team", mt.team.map(|tm| ref_ptr(t.teams[tm].id())));
     q.set("forfeitLoss", b(mt.forfeit_loss));
-    q.opt("points", if mt.points_null { Some(Value::Null) } else { opt_num(mt.points) });
+    // saveBonusInsteadOfTotal = qbjOnly && playerLevelStatsExist(), which is always true for now
+    if qbj {
+        q.set("bonusPoints", num(mt.bonus_points()));
+    } else {
+        q.opt("points", if mt.points_null { Some(Value::Null) } else { opt_num(mt.points) });
+    }
     q.set("correctTossupsWithoutBonuses", num(correct_tossups_without_bonuses(mt)));
     q.opt("bonusBouncebackPoints", opt_num(mt.bonus_bounceback_points));
     q.opt("lightningPoints", opt_num(mt.lightning_points));
@@ -617,7 +644,7 @@ fn match_team(t: &Tournament, mt: &MatchTeam) -> Value {
     yf.opt("manualBonusesHeard", opt_num(mt.manual_bonuses_heard));
     yf.opt("manualBonusPoints", opt_num(mt.manual_bonus_points));
     yf.opt("manualBouncebackPartsHeard", opt_num(mt.manual_bounceback_parts_heard));
-    q.with_yf_data(yf).done()
+    finish(q, yf, qbj)
 }
 
 /// `MatchTeam.getCorrectTossupsWithoutBonuses`

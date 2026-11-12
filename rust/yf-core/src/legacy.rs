@@ -396,9 +396,13 @@ fn parse_phase_structure(t: &Tournament, phases: &Value, games: &[OldGame], old_
             break;
         }
     }
-    let mut out = vec![];
+    let mut ranges: Vec<PhaseRange> = vec![];
     let mut code = 0;
-    let Jv::Obj(phase_obj) = jv(Some(phases)) else { return Ok(out) };
+    let empty = serde_json::Map::new();
+    let phase_obj = match jv(Some(phases)) {
+        Jv::Obj(o) => o,
+        _ => &empty,
+    };
     for phase_name in js_keys(phase_obj) {
         if prelim.as_deref().map_or(true, |p| p.is_empty()) {
             prelim = Some(phase_name.clone());
@@ -424,27 +428,38 @@ fn parse_phase_structure(t: &Tournament, phases: &Value, games: &[OldGame], old_
         if last == 0.0 {
             continue;
         }
-        let mut phase = Phase::new(ptype, first, last, &code.to_string(), Some(phase_name));
-        if let Some(divs) = phase_obj[phase_name].as_array() {
-            for div in divs {
-                let mut in_div = vec![];
-                for tm in old_teams {
-                    let Some(d) = tm.divisions else {
-                        return Err("Cannot read properties of undefined (team.divisions)".into());
-                    };
-                    if d.get(phase_name).is_some_and(|v| v == div) {
-                        in_div.push(tm);
-                    }
+        ranges.push(PhaseRange {
+            name: phase_name.clone(),
+            ptype,
+            code: code.to_string(),
+            first,
+            last,
+            divisions: phase_obj[phase_name].as_array(),
+        });
+    }
+    cover_unassigned_rounds(&mut ranges, games, max_round, code + 1);
+
+    let mut out = vec![];
+    for r in &ranges {
+        let mut phase = Phase::new(r.ptype, r.first, r.last, &r.code, Some(&r.name));
+        for div in r.divisions.into_iter().flatten() {
+            let mut in_div = vec![];
+            for tm in old_teams {
+                let Some(d) = tm.divisions else {
+                    return Err("Cannot read properties of undefined (team.divisions)".into());
+                };
+                if d.get(&r.name).is_some_and(|v| v == div) {
+                    in_div.push(tm);
                 }
-                let name = div.as_str().unwrap_or("");
-                let mut pool = Pool::new(in_div.len() as f64, 1.0, name, true);
-                for tm in in_div {
-                    if let Some(id) = t.find_team_by_name(js::trim(&tm.name)) {
-                        pool.add_team(id);
-                    }
-                }
-                phase.pools.push(pool);
             }
+            let name = div.as_str().unwrap_or("");
+            let mut pool = Pool::new(in_div.len() as f64, 1.0, name, true);
+            for tm in in_div {
+                if let Some(id) = t.find_team_by_name(js::trim(&tm.name)) {
+                    pool.add_team(id);
+                }
+            }
+            phase.pools.push(pool);
         }
         if phase.pools.is_empty() {
             phase.pools.push(Pool::new(99.0, 1.0, "New Pool", true));
@@ -452,6 +467,63 @@ fn parse_phase_structure(t: &Tournament, phases: &Value, games: &[OldGame], old_
         out.push(phase);
     }
     Ok(out)
+}
+
+/// A stage found in an old file, before its Phase is built
+struct PhaseRange<'a> {
+    name: String,
+    ptype: PhaseType,
+    code: String,
+    first: f64,
+    last: f64,
+    divisions: Option<&'a Vec<Value>>,
+}
+
+/// `coverUnassignedRounds`: a round with games that no stage claims goes into the stage before it (or
+/// after it, for rounds before the first stage); with no stages at all, one "Prelims" stage takes every round
+fn cover_unassigned_rounds(ranges: &mut Vec<PhaseRange>, games: &[OldGame], max_round: f64, next_code: i32) {
+    let rounds_with_games: Vec<f64> = games.iter().filter_map(round_num).filter(|r| *r > 0.0).collect();
+    if rounds_with_games.is_empty() {
+        return;
+    }
+    if ranges.is_empty() {
+        ranges.push(PhaseRange {
+            name: "Prelims".into(),
+            ptype: PhaseType::Prelim,
+            code: next_code.to_string(),
+            first: 1.0,
+            last: max_round,
+            divisions: None,
+        });
+        return;
+    }
+    let mut round = 1.0;
+    while round <= max_round {
+        let unassigned =
+            rounds_with_games.contains(&round) && !ranges.iter().any(|r| r.first <= round && round <= r.last);
+        if unassigned {
+            // reduce((a, b) => b.x > a.x ? b : a): the first one wins ties
+            let mut before: Option<usize> = None;
+            for (i, r) in ranges.iter().enumerate() {
+                if r.last < round && before.is_none_or(|b| r.last > ranges[b].last) {
+                    before = Some(i);
+                }
+            }
+            match before {
+                Some(i) => ranges[i].last = round,
+                None => {
+                    let mut first = 0;
+                    for (i, r) in ranges.iter().enumerate() {
+                        if r.first < ranges[first].first {
+                            first = i;
+                        }
+                    }
+                    ranges[first].first = round;
+                }
+            }
+        }
+        round += 1.0;
+    }
 }
 
 fn parse_packets(t: &mut Tournament, packets: &Value) {
