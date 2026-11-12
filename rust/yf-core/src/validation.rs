@@ -64,6 +64,49 @@ pub enum VType {
 }
 
 impl VType {
+    /// The string stored in files (MatchValidationType value)
+    pub fn as_str(&self) -> &'static str {
+        use VType::*;
+        match self {
+            LowTotalTuh => "LowTotalTuh",
+            InvalidTotalTuh => "InvalidTotalTuh",
+            MissingTeams => "MissingTeams",
+            MissingTotalPoints => "MissingTotalPoints",
+            TeamPlayingItself => "TeamPlayingItself",
+            InvalidTeamScore => "InvalidTeamScore",
+            TeamsNotInSamePool => "TeamsNotInSamePool",
+            PlayerTuhInvalid => "PlayherTuhInvalid",
+            TieGame => "TieGame",
+            NoTossupsHeard => "NoTossupsHeard",
+            FewerThanExpectedTUH => "FewerThanExpectedTUH",
+            MoreThanAllowedTUH => "MoreThanAllowedTUH",
+            PlayerAnswerCountInvalid => "PlayerAnswerCountInvalid",
+            PlayerHasTooManyBuzzes => "PlayerHasTooManyBuzzes",
+            MatchHasTooConvertedTU => "MatchHasTooConvertedTU",
+            TeamHasTooManyBuzzes => "TeamHasTooManyBuzzes",
+            NegativeBonusPoints => "NegativeBonusPoints",
+            BonusPointsTooHigh => "BonusPointsTooHigh",
+            BonusDivisorMismatch => "BonusDivisorMismatch",
+            DoubleForfeit => "DoubleForfeit",
+            InvalidOvertimeTuh => "InvalidOvertimeTuh",
+            OtButRegScoreNotTied => "OtButRegScoreNotTied",
+            RegulationTuhNotStandard => "RegulationTuhNotStandard",
+            TotalOtBuzzesExceedsTuh => "TotalOtBuzzesExceedsTuh",
+            OtTuhLessThanMinimum => "OtTuhLessThanMinimum",
+            TeamAlreadyPlayedInRound => "TeamAlreadyPlayedInRound",
+            InvalidBouncebackPoints => "InvalidBouncebackPoints",
+            TotalScoreAndTuPtsMismatch => "TotalScoreAndTuPtsMismatch",
+            ImportTwoMatchesSameTeam => "ImportTwoMatchesSameTeam",
+            TuPlusLtngNotEqualTotal => "TuPlusLtngNotEqualTotal",
+            LightningDivisorMismatch => "LightningDivisorMismatch",
+            BouncebackDivisorMismatch => "BouncebackDivisorMismatch",
+            OvertimeTuhTooHigh => "OvertimeTuhTooHigh",
+            ManualBonusMathMismatch => "ManualBonusMathMismatch",
+            BouncebackConvOver100 => "BouncebackConvOver100",
+            Other => "",
+        }
+    }
+
     pub fn from_str(s: &str) -> VType {
         use VType::*;
         match s {
@@ -119,6 +162,14 @@ pub struct Msg {
 }
 
 impl Msg {
+    /// The `type` written to files: the known type's name, or the unrecognized string read from the file
+    pub fn type_string(&self) -> &str {
+        if self.vtype == VType::Other {
+            &self.type_str
+        } else {
+            self.vtype.as_str()
+        }
+    }
     pub fn new(vtype: VType) -> Msg {
         Msg { status: Status::Ok, message: String::new(), suppressable: false, is_suppressed: false, vtype, type_str: String::new() }
     }

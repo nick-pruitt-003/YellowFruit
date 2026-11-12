@@ -9,6 +9,7 @@ pub mod model;
 pub mod stats;
 pub mod tournament;
 pub mod validation;
+pub mod writer;
 pub mod yft;
 
 pub use tournament::Tournament;

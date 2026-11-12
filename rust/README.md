@@ -22,8 +22,9 @@ The dumps hold real team and player names, so they live in `rust/target/parity/`
 - **Structure:** scoring rules, registrations, teams, rosters, seeds, phases, pools, rounds, packets, and every match: score, TUH, OT, carryover phases, whether it's omitted from stats, and the exact error and warning text from match validation.
 - **In-app standings:** `compileStats(false, true)`, i.e. per-phase pool standings with final-rank sorting.
 - **Stat report:** `compileStats(true)`, i.e. per-phase standings and individuals, prelims+playoffs, cumulative team, player and round-report stats. It includes the display strings (`ppg`, `ppb`, `winPct`, `gp`, bounceback %), not just raw numbers.
+- **Saved file:** what File > Save writes (`saved`), compared byte for byte. Then the saved file is reopened and everything above is dumped again (`reloaded`), and `resaveIdentical` records whether saving the reopened file gives the same bytes. Each side reopens its own saved file.
 
-## Status (2026-11-11)
+## Status (2026-11-12)
 
 `139 files: 122 identical, 17 fail to load in both, 0 differ`
 
@@ -34,6 +35,17 @@ The dumps hold real team and player names, so they live in `rust/target/parity/`
 | Fail in both apps | 17 | same failure: 9 old files with unescaped quotes in names (invalid JSON written by old YF), 6 that aren't YF4 files (MODAQ/qbj), 2 LIQBA seed files with inconsistent bonus settings plus 1 that crashes the TS parser |
 
 A mutation test confirmed the check catches real problems: swapping in Rust's default `{:.2}` for PPB makes 14 real files differ (8.125 shows as `8.13` in YF, `8.12` in Rust). The data has 463 such tie values in PPB and PPG.
+
+## Save parity (2026-11-12)
+
+`yf-core/src/writer.rs` writes `.yft` files. On all 122 files that load, its output is byte-identical to the TS app's, and so are the stats after reopening and the result of a second save. Getting there needed:
+
+- **Key order.** `camelCaseToSnakeCase` moves each renamed key to the end of its object, in the order of its rename list (duplicates included). The writer builds camelCase objects in `toFileObject` order and replays that pass on an ordered `serde_json::Value`. A mutation test (moving one entry in the list) makes every file differ.
+- **Numbers** print the JS way (`5`, not `5.0`; NaN as `null`), through `js::num_to_string`.
+- **Dates.** dayjs reads a date with no `Z` (e.g. `"2026-04-17"`) as local time, so the app re-saves it as local midnight in UTC, which depends on the Mac's time zone. The writer does the same with chrono's local zone. Checked against the app under `TZ=America/Los_Angeles` and `TZ=Asia/Kolkata`.
+- **`points: null`** in a saved file: the app keeps it as null, and the Rust loader now does too.
+
+Not covered, because none of the real files have them: question-level (MODAQ) match data, which yf-core doesn't load, so a save would drop it; date strings ending in `Z` other than `toISOString()` output (the writer returns an error); and YfData values the TS loader passes through untouched (wild-card rules, pool seeds and advancement rules, bonus tracking mode). Those three are rebuilt from the model, which gives the same bytes for anything YF itself wrote.
 
 ## Save and reopen in the TS app (2026-11-12)
 
@@ -61,7 +73,7 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 
 ## Not done yet (rest of milestone 1, then milestone 2)
 
-- **Save parity in Rust:** port `toFileObject` and the camel-to-snake pass (it appends snake_case keys in a fixed order, so port it as a transform on an ordered `serde_json::Value`), then diff the bytes against the oracle's `saved` field. The TS round trip is already in place to compare against.
+- **CI:** run the parity check on a few anonymized sample files, since the real ones can't be committed.
 - Error message text: load failures match on *whether* a file fails, not on the wording.
 - HTML report, SQBS export/import, QBJ export, qbj/MODAQ match import, schedule templates. These are milestone 2.
 
@@ -73,6 +85,7 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 - `legacy.rs`: `OldYfParsing.ts`.
 - `yft.rs`: the `.yft` load path (`FileParsing.ts`, `CaseConversion.ts`, `QbjUtils2.ts`).
 - `stats.rs`: `StatSummaries.ts`.
+- `writer.rs`: the `.yft` save path (`toFileObject` in each model class, `camelCaseToSnakeCase`, `TournamentManager.makeJSON`).
 - `tournament.rs`: the parts of `Tournament.ts` that parsing and stats use.
 - `yf-parity/`: dump and diff CLI.
 - `oracle/dump.ts`: the TS side.

@@ -8,3 +8,7 @@ description = "YellowFruit data model, file parsing and stats engine (Rust port,
 [dependencies]
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 icu_collator = "2"
+icu_normalizer = "2"
+icu_properties = "2"
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

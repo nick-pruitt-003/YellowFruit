@@ -862,7 +862,12 @@ impl<'a> Parser<'a> {
         let yf = self.yf(b);
         let team = Self::lookup(b.get("team"), &self.teams_by_id).ok_or("Failed to associate a MatchTeam object with a valid Team")?;
         let mut mt = MatchTeam::new(Some(team), Some(&self.t.scoring_rules), &self.t.teams);
-        mt.points = self.num(b, "points")?;
+        // `null` is kept as null (files saved after importing an old YF file can have it); see MatchTeam::points_null
+        if matches!(self.f(b, "points"), Jv::Null) {
+            (mt.points, mt.points_null) = (Some(0.0), true);
+        } else {
+            mt.points = self.num(b, "points")?;
+        }
         mt.forfeit_loss = self.f(b, "forfeitLoss").truthy();
         mt.bonus_bounceback_points = self.num(b, "bonusBouncebackPoints")?;
         mt.lightning_points = self.num(b, "lightningPoints")?;

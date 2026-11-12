@@ -93,6 +93,8 @@ Steps 1 and 3 are done, and step 2 is done except `.yft` serialize. Code is in `
 - Old files contain `null` scores (51 games), which need JS null semantics to keep match validation identical.
 - 17 of your files can't be opened by the current app. Nine are old files with unescaped quotes in team or player names, which a lenient loader could fix.
 
-Remaining for milestone 1: save parity (load, save, reload, diff), a CI job on anonymised samples, and the per-bug allow-list (none needed so far).
+- Save parity is done (2026-11-12): the Rust writer's `.yft` output is byte-identical to the app's on all 122 loadable files, and so are the stats after reopening. Building the round trip also turned up save/reopen bugs in the TS app itself on 16 old files, now fixed in both (see `rust/README.md`).
+
+Remaining for milestone 1: a CI job on anonymised samples, and the per-bug allow-list (none needed so far).
 
 Milestone 2 (2–3 weeks) would add SQBS, QBJ and HTML report output, with byte-diffs against the TS output for the same files. Only after that, start the egui UI, beginning with the read-only pages (Teams standings, Games list) before the dialogs.

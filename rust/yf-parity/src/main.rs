@@ -82,9 +82,28 @@ fn cmd_dump(out_dir: &str, files: &[String]) -> ExitCode {
                         json!({ "error": e, "format": format.as_str() })
                     }
                     Ok(mut loaded) => {
+                        loaded.tournament.app_version = CUR_YF_VERSION.to_string();
+                        // What File > Save writes, computed before the stats as in the oracle
+                        let saved = yf_core::writer::save_yft(&loaded.tournament);
                         let mut d = dump::dump_tournament(&mut loaded.tournament);
                         if format == yf_core::Format::Yft {
                             d["parserWarnings"] = json!(loaded.warnings);
+                        }
+                        match saved {
+                            Err(e) => d["saveError"] = json!(e),
+                            Ok(saved) => {
+                                // Reopen the saved file, as after a relaunch, and save it again
+                                match yf_core::yft::load_yft(&saved, CUR_YF_VERSION) {
+                                    Err(e) => d["reloaded"] = json!({ "error": e }),
+                                    Ok(mut re) => {
+                                        re.tournament.app_version = CUR_YF_VERSION.to_string();
+                                        let resaved = yf_core::writer::save_yft(&re.tournament);
+                                        d["resaveIdentical"] = json!(resaved.as_deref() == Ok(saved.as_str()));
+                                        d["reloaded"] = dump::dump_tournament(&mut re.tournament);
+                                    }
+                                }
+                                d["saved"] = json!(saved);
+                            }
                         }
                         d["format"] = json!(format.as_str());
                         d
@@ -142,8 +161,6 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
             }
             (None, None) => {}
         }
-        // Save-file fields (`saved`, `resaveIdentical`, `reloaded`) come from the TS side only until yf-core
-        // has a .yft writer; leave them out of the stats comparison
         let mut ts = ts;
         if let Some(o) = ts.as_object_mut() {
             for k in TS_ONLY_KEYS {
@@ -151,6 +168,25 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
             }
         }
         let mut diffs = vec![];
+        // The saved file must match byte for byte; report where the parsed JSON first differs
+        let (ts_saved, rs_saved) = (ts.as_object_mut().and_then(|o| o.remove("saved")), rs.get("saved").cloned());
+        match (&ts_saved, &rs_saved) {
+            (Some(Value::String(a)), Some(Value::String(b))) if a != b => {
+                let (pa, pb): (Value, Value) = (serde_json::from_str(a).unwrap(), serde_json::from_str(b).unwrap());
+                let mut sub = vec![];
+                compare_ordered(".saved", &pa, &pb, &mut sub);
+                if sub.is_empty() {
+                    sub.push(format!(".saved: same JSON, different bytes (first at byte {})", first_diff(a, b)));
+                }
+                diffs.extend(sub);
+            }
+            (Some(_), None) => diffs.push(format!(".saved: missing in rs ({})", rs.get("saveError").map(|v| v.to_string()).unwrap_or_default())),
+            _ => {}
+        }
+        let mut rs = rs;
+        if let Some(o) = rs.as_object_mut() {
+            o.remove("saved");
+        }
         compare("", &ts, &rs, &mut diffs);
         if diffs.is_empty() {
             same += 1;
@@ -174,7 +210,42 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
 }
 
 /// Dump keys only the TS oracle writes for now
-const TS_ONLY_KEYS: &[&str] = &["saved", "resaveIdentical", "reloaded"];
+const TS_ONLY_KEYS: &[&str] = &["resaveDiff"];
+
+fn first_diff(a: &str, b: &str) -> usize {
+    a.bytes().zip(b.bytes()).position(|(x, y)| x != y).unwrap_or(a.len().min(b.len()))
+}
+
+/// Like `compare`, but object key order counts too (it's part of the saved bytes)
+fn compare_ordered(path: &str, a: &Value, b: &Value, out: &mut Vec<String>) {
+    if out.len() >= 8 {
+        return;
+    }
+    if let (Value::Object(x), Value::Object(y)) = (a, b) {
+        let (kx, ky): (Vec<_>, Vec<_>) = (x.keys().collect(), y.keys().collect());
+        if kx != ky {
+            out.push(format!("{path}: key order ts={kx:?} rs={ky:?}"));
+        }
+        for (k, va) in x {
+            if let Some(vb) = y.get(k) {
+                compare_ordered(&format!("{path}.{k}"), va, vb, out);
+            }
+        }
+        return;
+    }
+    if let (Value::Array(x), Value::Array(y)) = (a, b) {
+        if x.len() != y.len() {
+            out.push(format!("{path}: length ts={} rs={}", x.len(), y.len()));
+        }
+        for (i, (va, vb)) in x.iter().zip(y).enumerate() {
+            compare_ordered(&format!("{path}[{i}]"), va, vb, out);
+        }
+        return;
+    }
+    if a != b && !(a.is_number() && b.is_number() && a.as_f64() == b.as_f64()) {
+        out.push(format!("{path}: ts={} rs={}", short(a), short(b)));
+    }
+}
 
 fn short(v: &Value) -> String {
     let s = v.to_string();
