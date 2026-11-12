@@ -4,7 +4,7 @@
 //! Instead of rewriting keys, `field()` reads a camelCase name the way the TS sees it after
 //! snakeCaseToCamelCase: for the ~60 renamed keys, only the snake_case spelling in the file counts.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
@@ -79,6 +79,10 @@ struct Parser<'a> {
     t: Tournament,
     teams_by_id: HashMap<String, TeamId>,
     players_by_id: HashMap<String, PlayerId>,
+    /// teams skipped for having no players; seeds and pools that point at them drop them too
+    skipped_team_ids: HashSet<String>,
+    /// players skipped for having no name; their match lines are dropped too
+    skipped_player_ids: HashSet<String>,
     phases_by_id: HashMap<String, PhaseId>,
     answer_types_by_id: HashMap<String, AnswerTypeId>,
     warnings: Vec<String>,
@@ -173,6 +177,16 @@ impl<'a> Parser<'a> {
     }
 
     /// getYfObjectFromId
+    /// Tournament.findTeamById, falling back to the trimmed name: files saved after importing an old YF
+    /// file could have IDs like "Team_Alpha " while names are trimmed on load
+    fn find_team_by_id(&self, id: &str) -> Option<TeamId> {
+        if let Some(t) = self.t.find_team_by_id(id) {
+            return Some(t);
+        }
+        let rest = id.strip_prefix("Team_")?;
+        self.t.find_team_by_id(&format!("Team_{}", js::trim(rest)))
+    }
+
     fn lookup<T: Copy>(o: Option<&Value>, dict: &HashMap<String, T>) -> Option<T> {
         let o = o?;
         if !jv(Some(o)).truthy() {
@@ -265,7 +279,11 @@ impl<'a> Parser<'a> {
                 let mut out = vec![];
                 for ptr in seeds {
                     let id = ref_str(ptr);
-                    let team = self.t.find_team_by_id(&id).ok_or(format!("Seed list references team {id}, which doesn't exist."))?;
+                    let team = self.find_team_by_id(&id);
+                    if team.is_none() && self.skipped_team_ids.contains(&id) {
+                        continue;
+                    }
+                    let team = team.ok_or(format!("Seed list references team {id}, which doesn't exist."))?;
                     out.push(team);
                 }
                 self.t.seeds = out;
@@ -476,6 +494,9 @@ impl<'a> Parser<'a> {
                 ""
             };
             self.warnings.push(format!("Team \"{raw_name}\" has no players and was skipped.{hint}"));
+            if let Some(id) = b.get("id").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                self.skipped_team_ids.insert(id.to_string());
+            }
             return Ok(None);
         }
         let mut team = Team { name, players, ..Default::default() };
@@ -521,6 +542,12 @@ impl<'a> Parser<'a> {
         let Some(b) = self.base(obj)? else { return Ok(None) };
         let name = js::trim(self.str_of(b, "name").unwrap_or(""));
         if name.is_empty() {
+            // files saved after importing an old YF file can have these; skip the player rather than refuse the file
+            if let Some(id) = b.get("id").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+                self.skipped_player_ids.insert(id.to_string());
+                self.warnings.push(format!("Team {team_name} contains a player with no name, who was skipped."));
+                return Ok(None);
+            }
             return Err(format!("Team {team_name} contains a player with no name."));
         }
         let pid = self.t.new_player(&unicode_truncate(name, 200));
@@ -710,8 +737,11 @@ impl<'a> Parser<'a> {
         }
         for pt in pts.into_iter().flatten() {
             let Some(pb) = self.base(pt)? else { continue };
-            let team = Self::lookup(pb.get("team"), &self.teams_by_id)
-                .ok_or(format!("Pool {name} contains a PoolTeam that doesn't refer to a valid Team."))?;
+            let team = Self::lookup(pb.get("team"), &self.teams_by_id);
+            if team.is_none() && pb.get("team").is_some_and(|o| is_ref(o) && self.skipped_team_ids.contains(&ref_str(o))) {
+                continue;
+            }
+            let team = team.ok_or(format!("Pool {name} contains a PoolTeam that doesn't refer to a valid Team."))?;
             let yfp = self.yf(pb);
             pool.pool_teams.push(PoolTeam {
                 team,
@@ -880,7 +910,16 @@ impl<'a> Parser<'a> {
 
     fn parse_match_player(&mut self, obj: &'a Value) -> R<Option<MatchPlayer>> {
         let Some(b) = self.base(obj)? else { return Ok(None) };
-        let pid = Self::lookup(b.get("player"), &self.players_by_id).ok_or("Failed to associate a MatchPlayer object with a valid Player")?;
+        let pid = Self::lookup(b.get("player"), &self.players_by_id);
+        if pid.is_none() && b.get("player").is_some_and(|o| is_ref(o) && self.skipped_player_ids.contains(&ref_str(o))) {
+            let had_buzzes =
+                self.arr(b, "answerCounts").is_some_and(|acs| acs.iter().any(|ac| jv(ac.get("number")).truthy()));
+            if had_buzzes {
+                self.warnings.push("Stats for a player with no name were dropped.".into());
+            }
+            return Ok(None);
+        }
+        let pid = pid.ok_or("Failed to associate a MatchPlayer object with a valid Player")?;
         let mut mp = MatchPlayer::new(pid, Some(&self.t.scoring_rules));
         mp.tossups_heard = drop_zero(self.num(b, "tossupsHeard")?);
         for pac in self.iter_req(b, "answerCounts")? {
@@ -1111,6 +1150,8 @@ pub fn load_yft(contents: &str, cur_version: &str) -> R<YftLoad> {
         t: Tournament::new(),
         teams_by_id: HashMap::new(),
         players_by_id: HashMap::new(),
+        skipped_team_ids: HashSet::new(),
+        skipped_player_ids: HashSet::new(),
         phases_by_id: HashMap::new(),
         answer_types_by_id: HashMap::new(),
         warnings: vec![],

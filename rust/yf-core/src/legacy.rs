@@ -335,9 +335,11 @@ fn file_pieces(contents: &str) -> Vec<String> {
 
 fn parse_teams(t: &mut Tournament, old: &[OldTeam]) {
     for team in old {
-        let (reg_name, letter) = js::team_get_name_and_letter(&team.name);
+        // Trimmed, like the .yft loader, so team IDs survive a save and reopen
+        let team_name = js::trim(&team.name);
+        let (reg_name, letter) = js::team_get_name_and_letter(team_name);
         let existing = t.find_registration(&reg_name);
-        let tid = t.new_team(&team.name);
+        let tid = t.new_team(team_name);
         {
             let tm = &mut t.teams[tid];
             tm.letter = letter;
@@ -346,7 +348,11 @@ fn parse_teams(t: &mut Tournament, old: &[OldTeam]) {
             tm.is_d2 = team.d2;
         }
         for p in &team.roster {
-            let pid = t.new_player(&p.name);
+            // the .yft loader can't take players with no name
+            if js::trim(&p.name).is_empty() {
+                continue;
+            }
+            let pid = t.new_player(js::trim(&p.name));
             let pl = &mut t.players[pid];
             pl.year_string = p.year.clone().unwrap_or_default();
             pl.is_ug = p.undergrad;
@@ -433,7 +439,7 @@ fn parse_phase_structure(t: &Tournament, phases: &Value, games: &[OldGame], old_
                 let name = div.as_str().unwrap_or("");
                 let mut pool = Pool::new(in_div.len() as f64, 1.0, name, true);
                 for tm in in_div {
-                    if let Some(id) = t.find_team_by_name(&tm.name) {
+                    if let Some(id) = t.find_team_by_name(js::trim(&tm.name)) {
                         pool.add_team(id);
                     }
                 }
@@ -490,8 +496,8 @@ fn parse_games(t: &mut Tournament, games: &[OldGame]) {
             .filter_map(|p| p.as_deref().and_then(|n| t.find_phase_by_name(n)))
             .collect();
         let (Some(lt), Some(rt)) = (
-            g.team1.as_deref().and_then(|n| t.find_team_by_name(n)),
-            g.team2.as_deref().and_then(|n| t.find_team_by_name(n)),
+            g.team1.as_deref().and_then(|n| t.find_team_by_name(js::trim(n))),
+            g.team2.as_deref().and_then(|n| t.find_team_by_name(js::trim(n))),
         ) else {
             continue;
         };
@@ -508,7 +514,8 @@ fn parse_games(t: &mut Tournament, games: &[OldGame]) {
         let mut m = Match::new(next_match_id, left, right);
         next_match_id += 1.0;
         m.carryover_phases = carryover;
-        m.tossups_read = g.tuhtot;
+        // forfeits have no tossups read, as when a .yft file is opened
+        m.tossups_read = if g.forfeit { None } else { g.tuhtot };
         m.overtime_tossups_read = g.ottu;
         m.tiebreaker = g.tiebreaker;
         m.notes = g.notes.clone();
@@ -526,7 +533,7 @@ fn parse_games(t: &mut Tournament, games: &[OldGame]) {
             let si = if side == Side::Left { 0 } else { 1 };
             for (pname, line) in &g.players[si] {
                 // Team.findPlayerByName: first player with that exact name
-                let Some(pid) = t.teams[team].players.iter().copied().find(|p| t.players[*p].name == *pname) else {
+                let Some(pid) = t.teams[team].players.iter().copied().find(|p| t.players[*p].name == js::trim(pname)) else {
                     continue;
                 };
                 let mt = m.side_mut(side);

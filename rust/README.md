@@ -35,6 +35,20 @@ The dumps hold real team and player names, so they live in `rust/target/parity/`
 
 A mutation test confirmed the check catches real problems: swapping in Rust's default `{:.2}` for PPB makes 14 real files differ (8.125 shows as `8.13` in YF, `8.12` in Rust). The data has 463 such tie values in PPB and PPG.
 
+## Save and reopen in the TS app (2026-11-12)
+
+The oracle now also saves each file the way File > Save does, reopens the saved file, and dumps it again (`saved`, `reloaded`, `resaveIdentical`, `resaveDiff` in the TS dumps). Before the fixes below, importing an old file and saving it went wrong on 16 of the 116 legacy files:
+
+| Bug | Files | Fix |
+|---|---|---|
+| Forfeits imported from old files kept their tossups read, so PPTUH changed after a save and reopen | 6 | `OldYfParsing`: forfeits get no tossups read, as the `.yft` loader already did |
+| Team names with trailing spaces produced IDs like `Team_Alpha ` that the loader (which trims names) couldn't resolve, so the saved file wouldn't open | 2 | Trim team and player names on import; the loader falls back to the trimmed ID for files already saved this way |
+| A seeded team with no players: the loader skips the team, then failed on the seed pointing at it | 2 | Seeds and pool entries pointing at a skipped team are dropped |
+| A roster entry with a blank name: the saved file wouldn't open | 3 | Skip blank names on import; the loader skips them with a warning in files already saved |
+| Player names with trailing spaces were trimmed only on reopen | 3 | Trimmed on import |
+
+After the fixes, no file changes stats on save and reopen and every saved file reopens. `src/__tests__/OldYfRoundTrip.test.ts` covers each case with a synthetic file. Saving the reopened file again gives the same bytes for 107 of 122 files; the other 15 differ only in player ID counter numbers (13) or in the dropped empty team (2). yf-core has the same import and loader fixes and still matches on all 122 files.
+
 ## JS behaviour that had to be reproduced (see `yf-core/src/js.rs`, `jsval.rs`)
 
 - `toFixed` rounds ties away from zero; Rust rounds them to even.
@@ -47,7 +61,7 @@ A mutation test confirmed the check catches real problems: swapping in Rust's de
 
 ## Not done yet (rest of milestone 1, then milestone 2)
 
-- **Save parity:** port `toFileObject` and the camel-to-snake key-ordering pass, then diff the saved `.yft` (load, save, reload). This is the next step and the one that would have caught the overtime double-count bug.
+- **Save parity in Rust:** port `toFileObject` and the camel-to-snake pass (it appends snake_case keys in a fixed order, so port it as a transform on an ordered `serde_json::Value`), then diff the bytes against the oracle's `saved` field. The TS round trip is already in place to compare against.
 - Error message text: load failures match on *whether* a file fails, not on the wording.
 - HTML report, SQBS export/import, QBJ export, qbj/MODAQ match import, schedule templates. These are milestone 2.
 

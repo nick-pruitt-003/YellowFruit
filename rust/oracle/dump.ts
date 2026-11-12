@@ -35,7 +35,7 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
 
   const { parseOldYfFile, isOldYftFile } = await import(`${DM}/OldYfParsing`);
-  const { earlyYftFileConversions, snakeCaseToCamelCase } = await import(`${DM}/CaseConversion`);
+  const { earlyYftFileConversions, snakeCaseToCamelCase, camelCaseToSnakeCase } = await import(`${DM}/CaseConversion`);
   const { collectRefTargets, findTournamentObject } = await import(`${DM}/QbjUtils2`);
   const { qbjFileValidVersion } = await import(`${DM}/QbjUtils`);
   const { default: FileParser } = await import(`${DM}/FileParsing`);
@@ -44,6 +44,38 @@ async function main() {
 
   const curYfVersion = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../release/app/package.json'), 'utf8'))
     .version as string;
+
+  /** TournamentManager.openYftFile for a YF4 file */
+  function loadYft(contents: string) {
+    const obj = JSON.parse(contents, (key, value) => {
+      if (isNameOfDateField(key)) return dayjs(value).toDate();
+      return value;
+    });
+    earlyYftFileConversions(obj);
+    snakeCaseToCamelCase(obj);
+    if (!qbjFileValidVersion(obj)) throw new Error('unsupported qbj version');
+    const tournObj = findTournamentObject(obj.objects);
+    if (!tournObj) throw new Error('no Tournament object');
+    const parser = new FileParser(collectRefTargets(obj.objects));
+    const t = parser.parseYftTournament(tournObj, curYfVersion);
+    if (!t) throw new Error('parse returned null');
+    t.conversions();
+    return { tourn: t, warnings: parser.warnings as string[] };
+  }
+
+  /** TournamentManager.generateWholeFileObj + makeJSON */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function saveYft(t: any) {
+    const whole = { version: '2.1.1', objects: [t.toFileObject(false, true)] };
+    camelCaseToSnakeCase(whole as unknown as Record<string, unknown>);
+    return JSON.stringify(whole, (key, value) => {
+      if (isNameOfDateField(key)) {
+        if (value) return dayjs(value).toISOString();
+        return undefined;
+      }
+      return value;
+    });
+  }
 
   const manifest: { file: string; out: string; format: string; error?: string }[] = [];
   const usedNames = new Set<string>();
@@ -64,23 +96,28 @@ async function main() {
         tourn = parseOldYfFile(contents);
       } else {
         entry.format = 'yft';
-        const obj = JSON.parse(contents, (key, value) => {
-          if (isNameOfDateField(key)) return dayjs(value).toDate();
-          return value;
-        });
-        earlyYftFileConversions(obj);
-        snakeCaseToCamelCase(obj);
-        if (!qbjFileValidVersion(obj)) throw new Error('unsupported qbj version');
-        const tournObj = findTournamentObject(obj.objects);
-        if (!tournObj) throw new Error('no Tournament object');
-        const parser = new FileParser(collectRefTargets(obj.objects));
-        tourn = parser.parseYftTournament(tournObj, curYfVersion);
-        if (!tourn) throw new Error('parse returned null');
-        tourn.conversions();
-        dump.parserWarnings = parser.warnings;
+        const loaded = loadYft(contents);
+        tourn = loaded.tourn;
+        dump.parserWarnings = loaded.warnings;
       }
       tourn.appVersion = curYfVersion;
-      dump = { ...dump, ...dumpTournament(tourn) };
+      // What File > Save writes (TournamentManager.saveYftFile)
+      const saved = saveYft(tourn);
+      dump = { ...dump, saved, ...dumpTournament(tourn) };
+
+      // Round trip: reopen the saved file as if after a relaunch, dump again, and save again
+      Match.overrideIdCounter(1000);
+      (Player as unknown as { idCounter: number }).idCounter = 1000;
+      try {
+        const re = loadYft(saved).tourn;
+        re.appVersion = curYfVersion;
+        const resaved = saveYft(re);
+        dump.resaveIdentical = resaved === saved;
+        if (resaved !== saved) dump.resaveDiff = jsonDiff('', JSON.parse(saved), JSON.parse(resaved), []);
+        dump.reloaded = dumpTournament(re);
+      } catch (err) {
+        dump.reloaded = { error: (err as Error).message };
+      }
     } catch (err) {
       entry.error = (err as Error).message;
       dump.error = entry.error;
@@ -92,6 +129,23 @@ async function main() {
   fs.writeFileSync(path.join(outDir, 'manifest.ts.json'), `${JSON.stringify(manifest, null, 1)}\n`);
   const errs = manifest.filter((m) => m.error).length;
   console.log(`wrote ${manifest.length} dumps to ${outDir} (${errs} failed to load)`);
+}
+
+/** First few paths where two parsed JSON values differ */
+function jsonDiff(p: string, a: unknown, b: unknown, out: string[]): string[] {
+  if (out.length >= 5 || JSON.stringify(a) === JSON.stringify(b)) return out;
+  if (a && b && typeof a === 'object' && typeof b === 'object') {
+    const ao = a as Record<string, unknown>;
+    const bo = b as Record<string, unknown>;
+    const keys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
+    if (JSON.stringify([...keys]) !== JSON.stringify(Object.keys(ao)) && JSON.stringify(Object.keys(ao)) !== JSON.stringify(Object.keys(bo))) {
+      out.push(`${p}: key order ${Object.keys(ao).join(',')} -> ${Object.keys(bo).join(',')}`);
+    }
+    for (const k of keys) jsonDiff(`${p}.${k}`, ao[k], bo[k], out);
+    return out;
+  }
+  out.push(`${p}: ${JSON.stringify(a)} -> ${JSON.stringify(b)}`);
+  return out;
 }
 
 function isNameOfDateField(key: string) {

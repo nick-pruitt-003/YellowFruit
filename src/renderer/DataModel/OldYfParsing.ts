@@ -197,16 +197,21 @@ function parseSettings(oldYfSettings: IOldYfTournamentSettings) {
 
 function parseTeams(tourn: Tournament, oldYfTeams: IOldYfTeam[]) {
   for (const team of oldYfTeams) {
-    const [regName, letter] = teamGetNameAndLetter(team.teamName);
+    // Old YF kept leading/trailing spaces in names. The .yft loader trims them, and team IDs are built from
+    // names, so trim here too or a saved file can't be reopened (the seed list would point at a missing team).
+    const teamName = team.teamName.trim();
+    const [regName, letter] = teamGetNameAndLetter(teamName);
     const existingRegistration = tourn.findRegistration(regName);
-    const newTeam = new Team(team.teamName);
+    const newTeam = new Team(teamName);
     newTeam.letter = letter;
     newTeam.isJV = team.jrVarsity;
     newTeam.isUG = team.teamUGStatus;
     newTeam.isD2 = team.teamD2Status;
      
     for (const playerName in team.roster) {
-      const newPlayer = new Player(playerName);
+      // The .yft loader rejects players with no name, so leave them out
+      if (!playerName.trim()) continue;
+      const newPlayer = new Player(playerName.trim());
       const demogs = team.roster[playerName];
       newPlayer.yearString = demogs.year;
       newPlayer.isUG = demogs.undergrad;
@@ -250,7 +255,7 @@ function parsePhaseStructure(
       const teamsInPool = getTeamsInDivision(phaseName, divisionName, oldYfTeams);
       const newPool = new Pool(teamsInPool.length, 1, divisionName, true); // just let everything allow carryover... I don't think we can reliably figure that out
       for (const team of teamsInPool) {
-        const yfTeam = tourn.findTeamByName(team.teamName);
+        const yfTeam = tourn.findTeamByName(team.teamName.trim());
         if (yfTeam) newPool.addTeam(yfTeam);
       }
       newPhase.pools.push(newPool);
@@ -324,8 +329,8 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
       .filter((phName) => phName !== mainPhase?.name)
       .map((phName) => tourn.findPhaseByName(phName))
       .filter((ph) => ph !== undefined);
-    const leftTeam = tourn.findTeamByName(g.team1);
-    const rightTeam = tourn.findTeamByName(g.team2);
+    const leftTeam = tourn.findTeamByName(trimIfString(g.team1));
+    const rightTeam = tourn.findTeamByName(trimIfString(g.team2));
     if (!leftTeam || !rightTeam) continue;
 
     if (!tourn.findPoolWithTeam(leftTeam, yfRound)) {
@@ -337,7 +342,8 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
 
     const newMatch = new Match(leftTeam, rightTeam, tourn.scoringRules.answerTypes);
     newMatch.carryoverPhases = carryOverPhases;
-    newMatch.tossupsRead = g.tuhtot;
+    // Forfeits have no tossups read, the same as when a .yft file is opened (FileParsing.parseMatch)
+    newMatch.tossupsRead = g.forfeit ? undefined : g.tuhtot;
     newMatch.overtimeTossupsRead = g.ottu;
     newMatch.tiebreaker = g.tiebreaker;
     newMatch.notes = g.notes;
@@ -355,7 +361,7 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
 
      
     for (const playerName in g.players1) {
-      const yfPlayer = leftTeam.findPlayerByName(playerName);
+      const yfPlayer = leftTeam.findPlayerByName(playerName.trim());
       if (!yfPlayer) continue;
 
       const playerLine = g.players1[playerName];
@@ -369,7 +375,7 @@ function parseGames(tourn: Tournament, oldYfGames: IOldYfGame[]) {
     }
      
     for (const playerName in g.players2) {
-      const yfPlayer = rightTeam.findPlayerByName(playerName);
+      const yfPlayer = rightTeam.findPlayerByName(playerName.trim());
       if (!yfPlayer) continue;
 
       const playerLine = g.players2[playerName];
@@ -622,4 +628,9 @@ function gameConversion3x0x0(games: IOldYfGame[]) {
   for (const g of games) {
     g.validationMsg = '';
   }
+}
+
+/** Old files aren't always well-typed, so don't call trim() on something that isn't a string */
+function trimIfString<T>(s: T): T {
+  return (typeof s === 'string' ? s.trim() : s) as T;
 }

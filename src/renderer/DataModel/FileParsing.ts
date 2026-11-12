@@ -46,6 +46,8 @@ function unicodeTruncate(str: string, max: number): string {
 
 /** Threshold (0 to 1 scale) for string matching of team and player names when importing data. Similarity must be at leaset this high for us to use the match. */
 const stringSimConfThreshold = 0.8;
+/** Prefix of Team IDs (see Team.id) */
+const teamIdPrefix = 'Team_';
 
 interface IYftObjectDict<T extends IYftDataModelObject> {
   [id: string]: T;
@@ -57,6 +59,12 @@ export default class FileParser {
   refTargets: IRefTargetDict;
 
   teamsById: IYftObjectDict<Team> = {};
+
+  /** IDs of teams left out because they had no players. Seeds and pools that point at them drop them too. */
+  skippedTeamIds = new Set<string>();
+
+  /** IDs of players left out because they had no name. Their lines in match data are dropped too. */
+  skippedPlayerIds = new Set<string>();
 
   phasesById: IYftObjectDict<Phase> = {};
 
@@ -432,6 +440,7 @@ export default class FileParser {
         ? ' This file appears to be from NAQT\'s registration system — update all rosters via the check-in process before generating the QBJ file.'
         : '';
       this.warnings.push(`Team "${name}" has no players and was skipped.${naqtHint}`);
+      if (qbjTeam.id) this.skippedTeamIds.add(qbjTeam.id);
       return null;
     }
     yfTeam.players = yfPlayers;
@@ -477,6 +486,12 @@ export default class FileParser {
 
     const { name, year } = qbjPlayer;
     if (!name?.trim()) {
+      // Files saved after importing an old YF file can contain these. Skip the player rather than refuse the file.
+      if (qbjPlayer.id) {
+        this.skippedPlayerIds.add(qbjPlayer.id);
+        this.warnings.push(`Team ${teamName} contains a player with no name, who was skipped.`);
+        return null;
+      }
       throw new Error(`Team ${teamName} contains a player with no name.`);
     }
 
@@ -501,12 +516,23 @@ export default class FileParser {
     return yfPlayer;
   }
 
+  /**
+   * Team IDs are built from team names, and names are trimmed when loaded. Files saved after importing an
+   * old YF file could have IDs with untrimmed names (e.g. "Team_Alpha "), so fall back to the trimmed form.
+   */
+  private findTeamById(id: string): Team | undefined {
+    const exact = this.tourn.findTeamById(id);
+    if (exact || !id.startsWith(teamIdPrefix)) return exact;
+    return this.tourn.findTeamById(`${teamIdPrefix}${id.slice(teamIdPrefix.length).trim()}`);
+  }
+
   parseSeedList(seedsFromFile: IQbjRefPointer[]): Team[] {
     if (!seedsFromFile) return [];
 
     const seedList = [];
     for (const ptr of seedsFromFile) {
-      const team = this.tourn.findTeamById(ptr.$ref);
+      const team = this.findTeamById(ptr.$ref);
+      if (!team && this.skippedTeamIds.has(ptr.$ref)) continue;
       if (!team) {
         throw new Error(`Seed list references team ${ptr.$ref}, which doesn't exist.`);
       }
@@ -693,6 +719,8 @@ export default class FileParser {
     const yfExtraData = (baseObj as IYftFilePoolTeam).YfData;
 
     const team = this.getYfObjectFromId(qbjPoolTeam.team as IIndeterminateQbj, this.teamsById);
+    const teamRef = (qbjPoolTeam.team as IQbjRefPointer | undefined)?.$ref;
+    if (!team && teamRef && this.skippedTeamIds.has(teamRef)) return null;
     if (!team) {
       throw new Error(`Pool ${this.currentPool?.name} contains a PoolTeam that doesn't refer to a valid Team.`);
     }
@@ -928,6 +956,12 @@ export default class FileParser {
 
     const qbjMatchPlayer = baseObj as IQbjMatchPlayer;
     const player = this.resolvePlayerIdentity(qbjMatchPlayer.player as IIndeterminateQbj, team);
+    const playerRef = (qbjMatchPlayer.player as IQbjRefPointer | undefined)?.$ref;
+    if (!player && playerRef && this.skippedPlayerIds.has(playerRef)) {
+      const hadBuzzes = (qbjMatchPlayer.answerCounts || []).some((ac) => (ac as IQbjPlayerAnswerCount).number);
+      if (hadBuzzes) this.warnings.push('Stats for a player with no name were dropped.');
+      return null;
+    }
     if (!player) {
       throw new Error('Failed to associate a MatchPlayer object with a valid Player');
     }
@@ -1197,7 +1231,7 @@ export default class FileParser {
 
   typesByIdArraysAddTeam(teamObj: IQbjObject) {
     if (teamObj.id) {
-      const yfTeam = this.tourn.findTeamById(teamObj.id);
+      const yfTeam = this.findTeamById(teamObj.id);
       if (yfTeam) this.teamsById[teamObj.id] = yfTeam;
       for (const playerObj of (teamObj as IQbjTeam).players || []) {
         this.typesByIdArraysAddPlayer(playerObj, yfTeam);

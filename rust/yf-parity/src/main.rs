@@ -142,6 +142,14 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
             }
             (None, None) => {}
         }
+        // Save-file fields (`saved`, `resaveIdentical`, `reloaded`) come from the TS side only until yf-core
+        // has a .yft writer; leave them out of the stats comparison
+        let mut ts = ts;
+        if let Some(o) = ts.as_object_mut() {
+            for k in TS_ONLY_KEYS {
+                o.remove(*k);
+            }
+        }
         let mut diffs = vec![];
         compare("", &ts, &rs, &mut diffs);
         if diffs.is_empty() {
@@ -164,6 +172,9 @@ fn cmd_diff(dir: &str, all: bool) -> ExitCode {
         ExitCode::SUCCESS
     }
 }
+
+/// Dump keys only the TS oracle writes for now
+const TS_ONLY_KEYS: &[&str] = &["saved", "resaveIdentical", "reloaded"];
 
 fn short(v: &Value) -> String {
     let s = v.to_string();
