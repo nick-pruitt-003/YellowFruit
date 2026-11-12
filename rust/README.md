@@ -107,6 +107,24 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 - Legacy files store `null` scores in 51 games. JS treats null as 0 in arithmetic but not in `===`, which changes the tie warning and score-mismatch validation; see `MatchTeam::points_null`.
 - Pre-2.5.2 files coerce fields with `+x` (`undefined` becomes NaN, `""` becomes 0).
 
+## egui UI (milestone 3, started 2026-11-12)
+
+`yf-gui` is a read-only front end over yf-core:
+
+```bash
+cargo run --manifest-path rust/Cargo.toml -p yf-gui -- path/to/file.yft
+```
+
+- Open a file with the Open button, Cmd/Ctrl+O, a path argument, or by dropping it on the window. Old YF 2.x/3.x files open too.
+- Pages: General (tournament info, rules, stages), Teams (rosters), Standings (the Teams page standings view: W/L/T, Pct, PP20, PPB, Final Rank or Advance To) and Games (each game by round, with a coloured dot for OK/warning/error; hover for the messages).
+- "Stat report" writes the six HTML pages to a temp folder and opens them in the browser, as the assessment recommends.
+- Stats are compiled as `TournamentManager.compileStats` does (`compile_stats(false, true)`), so Final Rank fills in.
+- `yf-gui --smoke <files>` draws every page of every file offscreen and reports panics: 122/122 loadable real files and 15/15 samples pass.
+- `YF_GUI_SHOT=<dir> yf-gui <file>` saves each page as a PNG and quits, for checking the UI without someone at the screen.
+- CI builds only yf-core and yf-parity; yf-gui isn't built on Linux.
+
+Not yet: any editing (the dialogs), native menus (`muda`), saving, the remaining pages (Rules, Schedule, Stat Report tab), and packaging.
+
 ## Not done yet (rest of milestone 1, then milestone 2)
 
 - Error message text: load failures match on *whether* a file fails, not on the wording.
@@ -124,6 +142,7 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 - `writer.rs`: the `.yft` save path (`toFileObject` in each model class, `camelCaseToSnakeCase`, `TournamentManager.makeJSON`).
 - `tournament.rs`: the parts of `Tournament.ts` that parsing and stats use.
 - `yf-parity/`: dump and diff CLI.
+- `yf-gui/`: the egui front end (`main.rs` window and file handling, `pages.rs` the pages, `shot.rs` screenshot mode).
 - `oracle/dump.ts`: the TS side.
 - `oracle/anonymize.ts`: makes the sample files.
 - `samples/`: anonymized real files for CI.

@@ -55,7 +55,7 @@ jobs:
           key: cargo-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock') }}
 
       - name: Rust unit tests
-        run: cargo test --manifest-path rust/Cargo.toml
+        run: cargo test --manifest-path rust/Cargo.toml -p yf-core -p yf-parity
 
       - name: Parity check on rust/samples
         run: rust/parity.sh rust/samples

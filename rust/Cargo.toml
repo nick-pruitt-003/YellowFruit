@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["yf-core", "yf-parity"]
+members = ["yf-core", "yf-parity", "yf-gui"]
 
 [workspace.package]
 edition = "2021"
