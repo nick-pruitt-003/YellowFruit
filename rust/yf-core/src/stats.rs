@@ -111,7 +111,7 @@ impl PoolTeamStats {
         }
         js::to_fixed(p, 3)
     }
-    fn correct_tuh(&self, r: &ScoringRules) -> f64 {
+    pub fn correct_tuh(&self, r: &ScoringRules) -> f64 {
         if r.use_overtime_in_pptuh() {
             self.tuh_total
         } else {
@@ -218,7 +218,8 @@ pub struct PlayerStats {
     pub games_played: f64,
     pub tossup_counts: Vec<Count>,
     pub tossups_heard: f64,
-    pub matches: Vec<(MatchLoc, Side)>,
+    /// Player Detail page entries: (match, side, index of the MatchPlayer in that side's matchPlayers)
+    pub matches: Vec<(MatchLoc, Side, usize)>,
 }
 
 impl PlayerStats {
@@ -290,6 +291,8 @@ fn ppb_compare(a: &PoolTeamStats, b: &PoolTeamStats) -> f64 {
 #[derive(Clone, Debug)]
 pub struct RoundStats {
     pub round_number: f64,
+    /// index of the round in its phase's rounds (None for the tournament total)
+    pub round: Option<usize>,
     pub phase: Option<PhaseId>,
     pub games: f64,
     pub tossups_heard_total: f64,
@@ -302,9 +305,10 @@ pub struct RoundStats {
 }
 
 impl RoundStats {
-    fn new(round_number: f64, phase: Option<PhaseId>) -> Self {
+    fn new(round_number: f64, phase: Option<PhaseId>, round: Option<usize>) -> Self {
         RoundStats {
             round_number,
+            round,
             phase,
             games: 0.0,
             tossups_heard_total: 0.0,
@@ -410,12 +414,12 @@ impl AggregateStandings {
             team_stats: t.list_of_all_teams().into_iter().map(PoolTeamStats::new).collect(),
             players: vec![],
             rounds: vec![],
-            total: RoundStats::new(-1.0, None),
+            total: RoundStats::new(-1.0, None, None),
             any_ties_exist: false,
         };
         for (pi, phase) in t.phases.iter().enumerate() {
             for (ri, round) in phase.rounds.iter().enumerate() {
-                let mut rs = RoundStats::new(round.number, Some(pi));
+                let mut rs = RoundStats::new(round.number, Some(pi), Some(ri));
                 for (mi, m) in round.matches.iter().enumerate() {
                     if m.omit {
                         continue;
@@ -432,7 +436,7 @@ impl AggregateStandings {
                         let mt = m.side(side);
                         let tossups_read = nn0(m.tossups_read);
                         let Some(team) = mt.team else { continue };
-                        for mp in &mt.match_players {
+                        for (mpi, mp) in mt.match_players.iter().enumerate() {
                             let i = match find_player(&agg.players, mp.player) {
                                 Some(i) => i,
                                 None => {
@@ -444,7 +448,7 @@ impl AggregateStandings {
                             ps.add_match_player(mp, tossups_read);
                             // addMatchResult
                             if mp.tossups_heard.is_some_and(|x| x != 0.0) {
-                                ps.matches.push((loc, side));
+                                ps.matches.push((loc, side, mpi));
                             }
                         }
                     }

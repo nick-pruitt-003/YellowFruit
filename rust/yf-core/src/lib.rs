@@ -2,6 +2,7 @@
 //! (`src/renderer/DataModel/`). The goal of this crate is output parity with the TS code on real
 //! tournament files; see `rust/README.md` for how that is checked.
 
+pub mod html;
 pub mod js;
 pub mod jsval;
 pub mod legacy;

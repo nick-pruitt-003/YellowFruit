@@ -257,7 +257,7 @@ fn is_iso_string(d: &str) -> bool {
 
 /// dayjs's `parseDate` for a string without a trailing `Z`: REGEX_PARSE, then
 /// `new Date(y, M - 1, d || 1, h || 0, m || 0, s || 0, ms)` in local time
-fn dayjs_local(d: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+pub(crate) fn dayjs_local(d: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     use chrono::{Duration, Local, LocalResult, Months, NaiveDate, TimeZone};
     static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let re = RE.get_or_init(|| {

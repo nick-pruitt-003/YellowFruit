@@ -22,7 +22,7 @@ The dumps hold real team and player names, so they live in `rust/target/parity/`
 
 `.github/workflows/parity.yml` runs the Rust unit tests and `rust/parity.sh rust/samples` on pushes and PRs that touch `rust/`, `src/renderer/DataModel/` or `src/renderer/Utils/`. It runs with `TZ=America/New_York` so the date-only sample goes through the local-time re-save path.
 
-The real files can't be committed, so `rust/samples/` holds 11 anonymized copies made with `rust/oracle/anonymize.ts`:
+The real files can't be committed, so `rust/samples/` holds 11 anonymized copies made with `rust/oracle/anonymize.ts`, plus 4 synthetic ones (below):
 
 ```bash
 npx tsx rust/oracle/anonymize.ts <real.yft> rust/samples/<name>.yft
@@ -31,6 +31,8 @@ npx tsx rust/oracle/anonymize.ts <real.yft> rust/samples/<name>.yft
 It replaces every school, team, player, pool, non-generic phase and round name, plus notes, packet names, locations, the tournament and site names, custom report-config names and scoring-rule names. It keeps everything that affects parsing and stats: numbers, settings, key order, team letters, and leading and trailing spaces. It exits 1 if a known original name of 4+ characters survives. On all 122 loadable real files, the anonymized copy gives the same stat numbers and the same validation results as the original, and both apps still agree on it.
 
 Each sample covers a real-file quirk: forfeits with tossups read, overtime and a blank player name (`legacy-forfeits-overtime-blank-player`), a seeded team with no players, stray spaces in team and player names, `null` scores, 20-point powers, a PPB that rounds on an exact tie, and YF4 files with overtime or a date-only start date. A mutation check (8 deliberate bugs in yf-core, one at a time: tie rounding, forfeit TUH, trimming, blank players, skipped seeds, `null` scores, key order, dates) fails the samples run every time.
+
+The 4 `synthetic-*.yft` files are variants of `yft-overtime` that switch on settings no real file uses: bouncebacks, lightning rounds, finals and tiebreaker stages, final rankings, schedule-template advancement, no bonuses, timed rounds, team attributes and an end date. `python3 rust/oracle/make_synthetic.py <out.yft> <full|final|nobonus|template>` rebuilds them.
 
 Not covered, because no real file has them: old files from before YF 2.5, and old files with bouncebacks or lightning rounds. Before adding a sample, look through it for anything identifying that the leak check can't know about (e.g. `grep -oE '"[A-Z][^"]+"' rust/samples/<name>.yft | sort -u`).
 
@@ -60,9 +62,11 @@ A mutation test confirmed the check catches real problems: swapping in Rust's de
 |---|---|---|
 | QBJ (`writer::export_qbj`) | done | 122 of 122 |
 | SQBS (`sqbs::generate_sqbs`) | done | 122 of 122 (109 full exports, 51 per-stage exports, 13 files with no stages, which the app also refuses) |
-| HTML report | not started | — |
+| HTML report (`html::generate_all`, all six pages, exported and in-app) | done | 122 of 122 |
 
 Not covered by the real files: SQBS with bouncebacks or lightning rounds.
+
+HTML paths no real file reaches: lightning rounds, tiebreaker stages, packet names, small school/JV/UG/D2 columns, an end date, double forfeits, a game carried over to two stages (the two-colour Stage cell), and a non-forfeit game with a `null` score (the app throws there; yf-core returns an error). All but the last two are covered by the `synthetic-*` samples (bouncebacks, lightning, finals, tiebreakers, final rankings, schedule-template advancement, no bonuses), which match byte for byte, as did the samples under `TZ=America/Los_Angeles` and `TZ=Asia/Kolkata`.
 
 **Old files with no stages lost their games.** Old YF didn't require stages, and the importer gives a stage only the rounds whose games are mostly tagged with it. 33 of the 116 old files define no stages, and 9 more have untagged rounds or a round split evenly between two stages: 733 games in 42 files were dropped on import. Now a round with games that no stage claims joins the stage before it (or after it, for rounds before the first stage), and a file with no stages gets one "Prelims" stage for every round. No game is dropped on any real file. Fixed in `OldYfParsing.ts` and `legacy.rs`, with tests in `OldYfRoundTrip.test.ts`.
 
@@ -104,7 +108,7 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 ## Not done yet (rest of milestone 1, then milestone 2)
 
 - Error message text: load failures match on *whether* a file fails, not on the wording.
-- HTML report, SQBS export/import, QBJ export, qbj/MODAQ match import, schedule templates. These are milestone 2.
+- SQBS import, qbj/MODAQ match import, schedule templates. These are milestone 2.
 
 ## Layout
 
@@ -114,6 +118,7 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 - `legacy.rs`: `OldYfParsing.ts`.
 - `yft.rs`: the `.yft` load path (`FileParsing.ts`, `CaseConversion.ts`, `QbjUtils2.ts`).
 - `stats.rs`: `StatSummaries.ts`.
+- `html.rs`: the HTML stat report (`HTMLReports.ts`).
 - `writer.rs`: the `.yft` save path (`toFileObject` in each model class, `camelCaseToSnakeCase`, `TournamentManager.makeJSON`).
 - `tournament.rs`: the parts of `Tournament.ts` that parsing and stats use.
 - `yf-parity/`: dump and diff CLI.

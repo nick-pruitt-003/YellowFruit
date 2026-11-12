@@ -111,6 +111,38 @@ fn cmd_dump(out_dir: &str, files: &[String]) -> ExitCode {
                                 .collect();
                             exports.insert("sqbsPerStage".into(), json!(per));
                         }
+                        // HTML report: as exported to files (prefix "report"), then as shown in the app (no prefix)
+                        let mut html_err = None;
+                        for (key, prefix) in [("htmlExport", Some("report")), ("htmlInApp", None)] {
+                            match yf_core::html::generate_all(&mut loaded.tournament, prefix) {
+                                Ok(p) => {
+                                    exports.insert(
+                                        key.into(),
+                                        json!({
+                                            "standings": p.standings,
+                                            "individuals": p.individuals,
+                                            "scoreboard": p.scoreboard,
+                                            "teamDetails": p.team_details,
+                                            "playerDetails": p.player_details,
+                                            "roundReport": p.round_report,
+                                        }),
+                                    );
+                                }
+                                Err(e) => {
+                                    html_err = Some(e);
+                                    break;
+                                }
+                            }
+                        }
+                        if let Some(e) = html_err {
+                            // the oracle's exports() throws, so the whole file counts as failed
+                            failed += 1;
+                            entry["error"] = json!(e);
+                            let d = json!({ "error": e, "format": format.as_str() });
+                            std::fs::write(Path::new(out_dir).join(&out), format!("{}\n", serde_json::to_string_pretty(&d).unwrap())).expect("write dump");
+                            manifest.push(entry);
+                            continue;
+                        }
                         d["exports"] = Value::Object(exports);
                         if format == yf_core::Format::Yft {
                             d["parserWarnings"] = json!(loaded.warnings);

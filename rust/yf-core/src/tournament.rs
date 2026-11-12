@@ -180,6 +180,40 @@ impl Tournament {
         out
     }
 
+    /// `getNextFullPhase`: the next playoff phase after this one
+    pub fn next_full_phase(&self, p: PhaseId) -> Option<PhaseId> {
+        (p + 1..self.phases.len()).find(|i| self.phases[*i].phase_type == PhaseType::Playoff)
+    }
+
+    /// `getTiebreakerPhaseFor`: the phase right after this one, if it's a tiebreaker phase
+    pub fn tiebreaker_phase_for(&self, p: PhaseId) -> Option<PhaseId> {
+        let next = p + 1;
+        (next < self.phases.len() && self.phases[next].phase_type == PhaseType::Tiebreaker).then_some(next)
+    }
+
+    pub fn finals_phases(&self) -> Vec<PhaseId> {
+        (0..self.phases.len()).filter(|i| self.phases[*i].phase_type == PhaseType::Finals).collect()
+    }
+
+    /// `numberOfPhasesWithStats`: phases of any type with at least one match
+    pub fn number_of_phases_with_stats(&self) -> usize {
+        self.phases.iter().filter(|p| p.any_matches_exist()).count()
+    }
+
+    pub fn packet_names_exist(&self) -> bool {
+        self.phases.iter().any(|p| p.packet_names_exist())
+    }
+
+    /// `hasAnyCarryover`: any full phase with a pool that carries over matches
+    pub fn has_any_carryover(&self) -> bool {
+        self.phases.iter().any(|p| p.is_full_phase() && p.has_any_carryover())
+    }
+
+    /// `findRegistrationByTeam`
+    pub fn registration_for_team(&self, t: TeamId) -> Option<&Registration> {
+        self.registrations.iter().find(|r| r.teams.contains(&t))
+    }
+
     pub fn all_prelim_games_carry_over(&self) -> bool {
         let Some(pre) = self.prelim_phase() else { return false };
         if self.full_phases().len() != 2 {

@@ -313,6 +313,13 @@ impl Round {
             _ => js::num_to_string(self.number),
         }
     }
+    /// `Round.displayName`
+    pub fn display_name(&self, force_numeric: bool) -> String {
+        match &self.name {
+            Some(n) if !n.is_empty() && !force_numeric => n.clone(),
+            _ => format!("Round {}", js::num_to_string(self.number)),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -395,6 +402,18 @@ impl Phase {
     }
     pub fn round_index_by_number(&self, n: f64) -> Option<usize> {
         self.rounds.iter().position(|r| r.number == n)
+    }
+    pub fn uses_numeric_rounds(&self) -> bool {
+        self.is_full_phase() || self.force_numeric_rounds == Some(true)
+    }
+    pub fn any_teams_assigned(&self) -> bool {
+        self.pools.iter().any(|p| !p.pool_teams.is_empty())
+    }
+    pub fn any_matches_exist(&self) -> bool {
+        self.rounds.iter().any(|r| !r.matches.is_empty())
+    }
+    pub fn packet_names_exist(&self) -> bool {
+        self.rounds.iter().any(|r| !r.packet_name.is_empty())
     }
 }
 
@@ -678,6 +697,49 @@ impl MatchTeam {
             }
         }
         t
+    }
+
+    /// `getActiveMatchPlayers`: players with a positive tossups heard value
+    pub fn active_match_players(&self) -> impl Iterator<Item = &MatchPlayer> {
+        self.match_players.iter().filter(|mp| mp.tossups_heard.is_some_and(|x| x > 0.0))
+    }
+
+    /// `getAnswerCounts`: team totals per answer type, in order of first appearance
+    pub fn answer_counts(&self) -> Vec<PlayerAnswerCount> {
+        let mut out: Vec<PlayerAnswerCount> = vec![];
+        for mp in &self.match_players {
+            for pac in &mp.answer_counts {
+                let i = match out.iter().position(|ac| ac.at == pac.at) {
+                    Some(i) => i,
+                    None => {
+                        out.push(PlayerAnswerCount::new(pac.at, pac.value, None));
+                        out.len() - 1
+                    }
+                };
+                out[i].add_to_count(pac.number);
+            }
+        }
+        out
+    }
+
+    /// `getBonusStats`: [bonus points, bonuses heard, ppb]
+    pub fn bonus_stats(&self, rules: &ScoringRules) -> [String; 3] {
+        let pts = self.bonus_points();
+        let heard = self.bonuses_heard(rules);
+        let ppb = pts / heard;
+        let ppb_str = if ppb.is_finite() { js::to_fixed(ppb, 2) } else { "--".to_string() };
+        [js::num_to_string(pts), js::num_to_string(heard), ppb_str]
+    }
+
+    /// `${this.points}`, which is "null" for the null scores old files have
+    pub fn points_string(&self) -> String {
+        if self.points_null {
+            return "null".into();
+        }
+        match self.points {
+            None => "undefined".into(),
+            Some(p) => js::num_to_string(p),
+        }
     }
 
     fn team_name<'a>(&self, n: &'a Names) -> Option<&'a str> {
@@ -1047,6 +1109,86 @@ impl Match {
         js::round((100.0 * converted) / heard)
     }
 
+    /// `getBouncebackStatsString`: [bounceback parts heard, conversion percentage]
+    pub fn bounceback_stats_string(&self, s: Side, rules: &ScoringRules) -> [String; 2] {
+        let heard = self.bounceback_parts_heard(s, rules);
+        if heard.is_nan() {
+            return ["-".into(), "-".into()];
+        }
+        if heard == 0.0 {
+            return ["0".into(), "-".into()];
+        }
+        let pct = self.bounceback_conv_pct(s, rules);
+        [js::num_to_string(heard), if pct.is_nan() { "-".into() } else { js::num_to_string(pct) }]
+    }
+
+    fn ot_truthy(&self) -> bool {
+        self.overtime_tossups_read.is_some_and(|x| x != 0.0 && !x.is_nan())
+    }
+
+    /// `getScoreString`: "Memorial 315, Riverview 180"
+    pub fn score_string(&self, teams: &[Team]) -> String {
+        let (Some(l), Some(r)) = (self.left.team, self.right.team) else { return "Incomplete game".into() };
+        let (ln, rn) = (&teams[l].name, &teams[r].name);
+        let (lf, rf) = (self.left.forfeit_loss, self.right.forfeit_loss);
+        if lf && rf {
+            return format!("{ln} vs. {rn} - Not played");
+        }
+        if lf || rf {
+            let (w, lo) = if rf { (ln, rn) } else { (rn, ln) };
+            return format!("{w} defeats {lo} by forfeit");
+        }
+        let (Some(lp), Some(rp)) = (self.left.points, self.right.points) else { return format!("{ln} vs. {rn}") };
+        let (w, lo, wn, lon) = if rp > lp { (&self.right, &self.left, rn, ln) } else { (&self.left, &self.right, ln, rn) };
+        let ot = if self.ot_truthy() { " (OT)" } else { "" };
+        format!("{wn} {}, {lon} {}{ot}", w.points_string(), lo.points_string())
+    }
+
+    /// `getWinnerLoserString`: "Central def. Washington"
+    pub fn winner_loser_string(&self, teams: &[Team]) -> String {
+        let (Some(lp), Some(rp)) = (self.left.points, self.right.points) else { return String::new() };
+        let name = |mt: &MatchTeam| mt.team.map(|t| teams[t].name.clone()).unwrap_or_else(|| "undefined".into());
+        let (ln, rn) = (name(&self.left), name(&self.right));
+        // ===, where null only equals null
+        let equal = match (self.left.points_null, self.right.points_null) {
+            (true, true) => true,
+            (false, false) => lp == rp,
+            _ => false,
+        };
+        if equal {
+            return format!("{ln} tied {rn}");
+        }
+        if lp > rp {
+            format!("{ln} def. {rn}")
+        } else {
+            format!("{rn} def. {ln}")
+        }
+    }
+
+    /// `getResultDisplay`: W, L, T or empty
+    pub fn result_display(&self, s: Side) -> &'static str {
+        match self.result(s) {
+            Some(Wlt::Win) => "W",
+            Some(Wlt::Loss) => "L",
+            Some(Wlt::Tie) => "T",
+            None => "",
+        }
+    }
+
+    /// `getScoreOnly`: "355 - 200", from one team's side. Errors where the TS throws (a null score
+    /// reaches `score.toString()`).
+    pub fn score_only(&self, s: Side, show_ot: bool) -> Result<String, String> {
+        let (mt, opp) = (self.side(s), self.side(s.other()));
+        if mt.forfeit_loss && opp.forfeit_loss {
+            return Ok("Not played".into());
+        }
+        if self.is_forfeit() {
+            return Ok("Forfeit".into());
+        }
+        let ot = if show_ot && self.ot_truthy() { " (OT)" } else { "" };
+        Ok(format!("{} - {}{ot}", add_parens_to_negative(mt)?, add_parens_to_negative(opp)?))
+    }
+
     pub fn error_messages(&self, ignore_hidden: bool, n: &Names) -> Vec<String> {
         let mut e = vec![];
         if self.total_tuh_field_validation.status == Status::Error {
@@ -1404,4 +1546,16 @@ impl MaxIfZero for f64 {
             self
         }
     }
+}
+
+/// `addParensToNegative(matchTeam.points)`
+fn add_parens_to_negative(mt: &MatchTeam) -> Result<String, String> {
+    let Some(p) = mt.points else { return Ok(String::new()) };
+    if mt.points_null {
+        return Err("Cannot read properties of null (reading 'toString')".into());
+    }
+    if p >= 0.0 {
+        return Ok(js::num_to_string(p));
+    }
+    Ok(format!("({})", js::num_to_string(p)))
 }
