@@ -6,6 +6,7 @@ A Rust port of the data model, file loading and stats engine from `src/renderer/
 
 ```bash
 rust/parity.sh                 # every .yft under ~/Downloads/_QuizBowl
+rust/parity.sh rust/samples    # the anonymized samples CI uses
 rust/parity.sh /some/folder    # or any folder
 ```
 
@@ -16,6 +17,22 @@ It needs `node_modules` (`npm ci --ignore-scripts` is enough) and cargo, and tak
 3. `yf-parity diff` compares them field by field. Numbers compare as f64, strings exactly. It exits 1 on any difference (`diff-all` prints every difference, not just the first few).
 
 The dumps hold real team and player names, so they live in `rust/target/parity/`, which git ignores.
+
+## CI and the sample files
+
+`.github/workflows/parity.yml` runs the Rust unit tests and `rust/parity.sh rust/samples` on pushes and PRs that touch `rust/`, `src/renderer/DataModel/` or `src/renderer/Utils/`. It runs with `TZ=America/New_York` so the date-only sample goes through the local-time re-save path.
+
+The real files can't be committed, so `rust/samples/` holds 11 anonymized copies made with `rust/oracle/anonymize.ts`:
+
+```bash
+npx tsx rust/oracle/anonymize.ts <real.yft> rust/samples/<name>.yft
+```
+
+It replaces every school, team, player, pool, non-generic phase and round name, plus notes, packet names, locations, the tournament and site names, custom report-config names and scoring-rule names. It keeps everything that affects parsing and stats: numbers, settings, key order, team letters, and leading and trailing spaces. It exits 1 if a known original name of 4+ characters survives. On all 122 loadable real files, the anonymized copy gives the same stat numbers and the same validation results as the original, and both apps still agree on it.
+
+Each sample covers a real-file quirk: forfeits with tossups read, overtime and a blank player name (`legacy-forfeits-overtime-blank-player`), a seeded team with no players, stray spaces in team and player names, `null` scores, 20-point powers, a PPB that rounds on an exact tie, and YF4 files with overtime or a date-only start date. A mutation check (8 deliberate bugs in yf-core, one at a time: tie rounding, forfeit TUH, trimming, blank players, skipped seeds, `null` scores, key order, dates) fails the samples run every time.
+
+Not covered, because no real file has them: old files from before YF 2.5, and old files with bouncebacks or lightning rounds. Before adding a sample, look through it for anything identifying that the leak check can't know about (e.g. `grep -oE '"[A-Z][^"]+"' rust/samples/<name>.yft | sort -u`).
 
 ## What a dump covers
 
@@ -73,7 +90,6 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 
 ## Not done yet (rest of milestone 1, then milestone 2)
 
-- **CI:** run the parity check on a few anonymized sample files, since the real ones can't be committed.
 - Error message text: load failures match on *whether* a file fails, not on the wording.
 - HTML report, SQBS export/import, QBJ export, qbj/MODAQ match import, schedule templates. These are milestone 2.
 
@@ -89,3 +105,5 @@ After the fixes, no file changes stats on save and reopen and every saved file r
 - `tournament.rs`: the parts of `Tournament.ts` that parsing and stats use.
 - `yf-parity/`: dump and diff CLI.
 - `oracle/dump.ts`: the TS side.
+- `oracle/anonymize.ts`: makes the sample files.
+- `samples/`: anonymized real files for CI.

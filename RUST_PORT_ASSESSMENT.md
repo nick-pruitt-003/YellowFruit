@@ -95,6 +95,8 @@ Steps 1 and 3 are done, and step 2 is done except `.yft` serialize. Code is in `
 
 - Save parity is done (2026-11-12): the Rust writer's `.yft` output is byte-identical to the app's on all 122 loadable files, and so are the stats after reopening. Building the round trip also turned up save/reopen bugs in the TS app itself on 16 old files, now fixed in both (see `rust/README.md`).
 
-Remaining for milestone 1: a CI job on anonymised samples, and the per-bug allow-list (none needed so far).
+- CI (2026-11-12): `.github/workflows/parity.yml` runs the parity check on 11 anonymised samples in `rust/samples/`.
+
+Milestone 1 is done. The per-bug allow-list it planned for wasn't needed: every difference found was fixed on one side or the other.
 
 Milestone 2 (2–3 weeks) would add SQBS, QBJ and HTML report output, with byte-diffs against the TS output for the same files. Only after that, start the egui UI, beginning with the read-only pages (Teams standings, Games list) before the dialogs.

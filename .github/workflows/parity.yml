@@ -1,0 +1,61 @@
+name: Rust parity
+
+# Checks that the Rust core (rust/yf-core) loads, computes stats for and saves the anonymized sample files
+# in rust/samples exactly as the TypeScript app does. See rust/README.md.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'rust/**'
+      - 'src/renderer/DataModel/**'
+      - 'src/renderer/Utils/**'
+      - 'package-lock.json'
+      - '.github/workflows/parity.yml'
+  pull_request:
+    paths:
+      - 'rust/**'
+      - 'src/renderer/DataModel/**'
+      - 'src/renderer/Utils/**'
+      - 'package-lock.json'
+      - '.github/workflows/parity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    env:
+      # Not UTC, so the date-only sample exercises the local-time re-save path on both sides
+      TZ: America/New_York
+
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v4
+
+      - name: Install Node and NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JS dependencies
+        # Scripts off: the oracle only needs the DataModel sources, not Electron
+        run: npm ci --ignore-scripts
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock') }}
+
+      - name: Rust unit tests
+        run: cargo test --manifest-path rust/Cargo.toml
+
+      - name: Parity check on rust/samples
+        run: rust/parity.sh rust/samples
