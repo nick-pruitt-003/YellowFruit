@@ -24,6 +24,7 @@
     ".erb/dll",
     ".erb/configs",
     "eslint.config.mjs",
-    "vitest.config.mts"
+    "vitest.config.mts",
+    "rust"
   ]
 }

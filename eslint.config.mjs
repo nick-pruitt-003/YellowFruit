@@ -12,6 +12,7 @@ export default tseslint.config(
       '.erb/**',        // webpack build scripts — not production code
       '.claude/**',     // claude-code worktrees mirror the repo; don't double-lint
       'vitest.config.mts', // excluded from tsconfig; ESLint project service can't parse it
+      'rust/**',        // Rust port + its TS parity oracle (run with tsx, outside the app's tsconfig)
       '.eslintrc.js',   // legacy config file, ignored by flat config anyway
       '**/*.d.ts',
       '**/*.css.d.ts',

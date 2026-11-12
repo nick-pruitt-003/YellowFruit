@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["yf-core", "yf-parity"]
+
+[workspace.package]
+edition = "2021"
+license = "AGPL-3.0-or-later"
+
+[profile.dev]
+opt-level = 1
