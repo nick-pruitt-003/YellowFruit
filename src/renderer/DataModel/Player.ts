@@ -268,7 +268,8 @@ export class Player implements IQbjPlayer, IYftDataModelObject {
     const { year } = this;
     if (year === undefined) return this.yearString;
 
-    return Player.yearTitles[year as unknown as keyof typeof Player.yearTitles];
+    // e.g. -1 ("not applicable") has no title
+    return Player.yearTitles[year as unknown as keyof typeof Player.yearTitles] ?? this.yearString;
   }
 
   /** Try to find a matching non-numeric year (e.g. "Freshman") and return the

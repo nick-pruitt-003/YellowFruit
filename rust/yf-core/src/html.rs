@@ -467,9 +467,9 @@ pub fn year_display_text(p: &Player) -> String {
     ];
     match writer::player_year(&p.year_string) {
         None => p.year_string.clone(),
-        // yearTitles has no entry for -1 (PlayerYear.NotApplicable)
-        Some(y) if y < 0.0 => "undefined".into(),
-        Some(y) => TITLES.get(y as usize).copied().unwrap_or("undefined").to_string(),
+        // yearTitles has no entry for -1 (PlayerYear.NotApplicable): fall back to the text as entered
+        Some(y) if y < 0.0 => p.year_string.clone(),
+        Some(y) => TITLES.get(y as usize).map(|s| s.to_string()).unwrap_or_else(|| p.year_string.clone()),
     }
 }
 
@@ -1142,7 +1142,7 @@ impl<'a> HtmlReportGenerator<'a> {
     fn team_detail_one_team(&self, ts: &PoolTeamStats) -> String {
         let team = &self.t.teams[ts.team];
         let attrs = self.team_attribute_string(ts.team);
-        let id = id_attr(&alpha_only(&team.name));
+        let id = id_attr(&self.team_detail_link_id(ts.team));
         let mut h2_attrs = vec![id.as_str()];
         if !attrs.is_empty() {
             h2_attrs.push("style=\"margin-bottom:0\"");
@@ -1394,7 +1394,12 @@ impl<'a> HtmlReportGenerator<'a> {
             }
             upper_compare(&t.players[a.player].name, &t.players[b.player].name)
         });
-        list.iter().map(|ps| self.player_detail_one_player(ps)).collect::<Vec<_>>().join("\n")
+        // players who never heard a tossup have no games to show (and no links point here)
+        list.iter()
+            .filter(|ps| ps.tossups_heard > 0.0)
+            .map(|ps| self.player_detail_one_player(ps))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn player_detail_one_player(&self, ps: &PlayerStats) -> String {
@@ -1402,7 +1407,7 @@ impl<'a> HtmlReportGenerator<'a> {
         let player = &t.players[ps.player];
         let team = &t.teams[ps.team];
         let attrs = self.player_attribute_string(player);
-        let id = id_attr(&player_detail_link_id(player, team));
+        let id = id_attr(&self.player_detail_link_id(ps.player, ps.team));
         let mut h2_attrs = vec![id.as_str()];
         if !attrs.is_empty() {
             h2_attrs.push("style=\"margin-bottom:0\"");
@@ -1464,7 +1469,9 @@ impl<'a> HtmlReportGenerator<'a> {
         let forf = m.is_forfeit();
         let mut cells = self.detail_row_start(loc, side, omit_phase, false);
         let gp = nn0(mp.tossups_heard) / nn0(m.tossups_read);
-        cells.push(numeric_cell(&if forf { String::new() } else { js::to_fixed(gp, 1) }));
+        // no tossups-read value gives Infinity or NaN
+        let gp_str = if gp.is_finite() { js::to_fixed(gp, 1) } else { MDASH.to_string() };
+        cells.push(numeric_cell(&if forf { String::new() } else { gp_str }));
         for at in &self.rules().answer_types {
             if forf {
                 cells.push(numeric_cell(""));
@@ -1648,12 +1655,23 @@ impl<'a> HtmlReportGenerator<'a> {
     fn team_detail_link(&self, team: TeamId, dont_truncate: bool) -> String {
         let tm = &self.t.teams[team];
         let text = if dont_truncate { tm.name.clone() } else { tm.truncated_name(35) };
-        a_tag(&format!("{}#{}", self.file_name_for_link(Page::TeamDetails), alpha_only(&tm.name)), &text)
+        a_tag(&format!("{}#{}", self.file_name_for_link(Page::TeamDetails), self.team_detail_link_id(team)), &text)
     }
 
     fn player_detail_link(&self, player: PlayerId, team: TeamId) -> String {
-        let (p, tm) = (&self.t.players[player], &self.t.teams[team]);
-        a_tag(&format!("{}#{}", self.file_name_for_link(Page::PlayerDetails), player_detail_link_id(p, tm)), &p.name)
+        let p = &self.t.players[player];
+        a_tag(&format!("{}#{}", self.file_name_for_link(Page::PlayerDetails), self.player_detail_link_id(player, team)), &p.name)
+    }
+
+    /// Anchor for a team on Team Detail; names that only differ in punctuation get "-2", "-3"...
+    fn team_detail_link_id(&self, team: TeamId) -> String {
+        unique_anchor(team, &self.t.list_of_all_teams(), |tm| self.t.teams[tm].name.clone())
+    }
+
+    /// Anchor for a player on Player Detail, made unique within the team the same way
+    fn player_detail_link_id(&self, player: PlayerId, team: TeamId) -> String {
+        let players = &self.t.teams[team].players;
+        format!("{}-{}", self.team_detail_link_id(team), unique_anchor(player, players, |p| self.t.players[p].name.clone()))
     }
 
     fn file_name_for_link(&self, page: Page) -> String {
@@ -1724,8 +1742,16 @@ fn round_link_id(round: &Round) -> String {
     format!("Round-{}", js::num_to_string(round.number))
 }
 
-fn player_detail_link_id(p: &Player, tm: &Team) -> String {
-    format!("{}-{}", alpha_only(&tm.name), alpha_only(&p.name))
+/// `uniqueAnchor`: alpha_only(name), plus "-n" for the nth item in the list with the same alpha_only(name)
+fn unique_anchor<T: PartialEq + Copy>(item: T, all: &[T], name: impl Fn(T) -> String) -> String {
+    let base = alpha_only(&name(item));
+    let same: Vec<T> = all.iter().copied().filter(|x| alpha_only(&name(*x)) == base).collect();
+    let n = same.iter().position(|x| *x == item).map(|i| i + 1).unwrap_or(0);
+    if n > 1 {
+        format!("{base}-{n}")
+    } else {
+        base
+    }
 }
 
 fn has_powers(r: &ScoringRules) -> bool {
@@ -1781,7 +1807,7 @@ mod tests {
         let p = |y: &str| Player { year_string: y.into(), ..Default::default() };
         assert_eq!(year_display_text(&p("12")), "12th Grade");
         assert_eq!(year_display_text(&p("Jr.")), "Junior");
-        assert_eq!(year_display_text(&p("-1")), "undefined");
+        assert_eq!(year_display_text(&p("-1")), "-1");
         assert_eq!(year_display_text(&p("Faculty")), "Faculty");
     }
 
@@ -1808,13 +1834,13 @@ mod tests {
         assert_eq!(m.score_string(&teams), "Alpha 250, Beta -15");
         assert_eq!(m.winner_loser_string(&teams), "Alpha def. Beta");
         assert_eq!(m.score_only(Side::Right, true).unwrap(), "(-15) - 250");
-        // null === null, but null !== 0, and null > 0 is false
+        // a null score shows and compares as 0, the way the stats count it
         let mut m = mk(Some(0.0), Some(0.0));
         assert_eq!(m.winner_loser_string(&teams), "Alpha tied Beta");
         m.left.points_null = true;
-        assert_eq!(m.winner_loser_string(&teams), "Beta def. Alpha");
-        assert_eq!(m.score_string(&teams), "Alpha null, Beta 0");
-        assert!(m.score_only(Side::Left, false).is_err());
+        assert_eq!(m.winner_loser_string(&teams), "Alpha tied Beta");
+        assert_eq!(m.score_string(&teams), "Alpha 0, Beta 0");
+        assert_eq!(m.score_only(Side::Left, false).unwrap(), "0 - 0");
         m.right.points_null = true;
         assert_eq!(m.winner_loser_string(&teams), "Alpha tied Beta");
         let mut m = mk(Some(100.0), None);
@@ -1824,6 +1850,13 @@ mod tests {
         m.left.forfeit_loss = true;
         assert_eq!(m.score_string(&teams), "Beta defeats Alpha by forfeit");
         assert_eq!(m.score_only(Side::Left, false).unwrap(), "Forfeit");
+    }
+
+    #[test]
+    fn anchors_stay_unique() {
+        let names = ["St. Mary's", "St Marys", "Other"];
+        let anchor = |i: usize| unique_anchor(i, &[0, 1, 2], |x| names[x].to_string());
+        assert_eq!([anchor(0), anchor(1), anchor(2)], ["StMarys", "StMarys-2", "Other"]);
     }
 
     #[test]

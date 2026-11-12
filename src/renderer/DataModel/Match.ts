@@ -250,7 +250,7 @@ export class Match implements IQbjMatch, IYftDataModelObject {
     const winner = rightPts > leftPts ? this.rightTeam : this.leftTeam;
     const loser = winner === this.leftTeam ? this.rightTeam : this.leftTeam;
     const ot = this.overtimeTossupsRead ? ' (OT)' : '';
-    return `${winner.team?.name} ${winner.points}, ${loser.team?.name} ${loser.points}${ot}`;
+    return `${winner.team?.name} ${displayScore(winner.points)}, ${loser.team?.name} ${displayScore(loser.points)}${ot}`;
   }
 
   listCarryoverPhases() {
@@ -415,7 +415,8 @@ export class Match implements IQbjMatch, IYftDataModelObject {
 
     const leftName = this.leftTeam.team?.name;
     const rightName = this.rightTeam.team?.name;
-    if (leftScore === rightScore) return `${leftName} tied ${rightName}`;
+    // a null score (old files have them) counts as 0, as it does in the stats
+    if ((leftScore ?? 0) === (rightScore ?? 0)) return `${leftName} tied ${rightName}`;
     const winner = leftScore > rightScore ? leftName : rightName;
     const loser = leftScore > rightScore ? rightName : leftName;
     return `${winner} def. ${loser}`;
@@ -913,6 +914,12 @@ export function otherTeam(whichTeam: LeftOrRight): LeftOrRight {
 
 function addParensToNegative(score: number | undefined): string {
   if (score === undefined) return '';
-  if (score >= 0) return score.toString();
-  return `(${score})`;
+  const pts = displayScore(score);
+  if (pts >= 0) return pts.toString();
+  return `(${pts})`;
+}
+
+/** Old files can hold a null score; show it as 0, which is how the stats count it */
+function displayScore(score: number | undefined): number {
+  return score ?? 0;
 }

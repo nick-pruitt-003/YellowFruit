@@ -731,11 +731,8 @@ impl MatchTeam {
         [js::num_to_string(pts), js::num_to_string(heard), ppb_str]
     }
 
-    /// `${this.points}`, which is "null" for the null scores old files have
+    /// `${displayScore(this.points)}`: a null score (old files have them) shows as 0, as the stats count it
     pub fn points_string(&self) -> String {
-        if self.points_null {
-            return "null".into();
-        }
         match self.points {
             None => "undefined".into(),
             Some(p) => js::num_to_string(p),
@@ -1149,13 +1146,8 @@ impl Match {
         let (Some(lp), Some(rp)) = (self.left.points, self.right.points) else { return String::new() };
         let name = |mt: &MatchTeam| mt.team.map(|t| teams[t].name.clone()).unwrap_or_else(|| "undefined".into());
         let (ln, rn) = (name(&self.left), name(&self.right));
-        // ===, where null only equals null
-        let equal = match (self.left.points_null, self.right.points_null) {
-            (true, true) => true,
-            (false, false) => lp == rp,
-            _ => false,
-        };
-        if equal {
+        // null scores count as 0 (`points` already holds 0 for them)
+        if lp == rp {
             return format!("{ln} tied {rn}");
         }
         if lp > rp {
@@ -1175,8 +1167,8 @@ impl Match {
         }
     }
 
-    /// `getScoreOnly`: "355 - 200", from one team's side. Errors where the TS throws (a null score
-    /// reaches `score.toString()`).
+    /// `getScoreOnly`: "355 - 200", from one team's side. Never fails now that null scores show as 0;
+    /// the Result is kept for the report code that propagates it.
     pub fn score_only(&self, s: Side, show_ot: bool) -> Result<String, String> {
         let (mt, opp) = (self.side(s), self.side(s.other()));
         if mt.forfeit_loss && opp.forfeit_loss {
@@ -1550,10 +1542,8 @@ impl MaxIfZero for f64 {
 
 /// `addParensToNegative(matchTeam.points)`
 fn add_parens_to_negative(mt: &MatchTeam) -> Result<String, String> {
+    // a null score is held as Some(0.0), so it shows as 0
     let Some(p) = mt.points else { return Ok(String::new()) };
-    if mt.points_null {
-        return Err("Cannot read properties of null (reading 'toString')".into());
-    }
     if p >= 0.0 {
         return Ok(js::num_to_string(p));
     }

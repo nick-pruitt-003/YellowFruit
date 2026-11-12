@@ -620,7 +620,7 @@ export default class HtmlReportGenerator {
 
   private teamDetailOneTeam(teamStats: PoolTeamStats) {
     const teamAttributes = this.teamAttributeString(teamStats.team);
-    const h2Attrs = [id(teamDetailLinkId(teamStats.team))];
+    const h2Attrs = [id(this.teamDetailLinkId(teamStats.team))];
     if (teamAttributes) h2Attrs.push('style="margin-bottom:0"');
 
     const segments = [];
@@ -841,12 +841,16 @@ export default class HtmlReportGenerator {
       return 0;
     });
 
-    return playerListCopy.map((pStats) => this.playerDetailOnePlayer(pStats)).join('\n');
+    // players who never heard a tossup have no games to show (and no links point here)
+    return playerListCopy
+      .filter((pStats) => pStats.tossupsHeard > 0)
+      .map((pStats) => this.playerDetailOnePlayer(pStats))
+      .join('\n');
   }
 
   private playerDetailOnePlayer(playerStats: PlayerStats) {
     const playerAttributes = this.playerAttributeString(playerStats.player);
-    const h2Attrs = [id(playerDetailLinkId(playerStats.player, playerStats.team))];
+    const h2Attrs = [id(this.playerDetailLinkId(playerStats.player, playerStats.team))];
     if (playerAttributes) h2Attrs.push('style="margin-bottom:0"');
 
     const segments = [];
@@ -911,7 +915,9 @@ export default class HtmlReportGenerator {
     cells.push(textCell(result.match.getResultDisplay(result.whichTeam)));
     cells.push(textCell(this.scoreboardMatchLink(result.match, result.match.getScoreOnly(result.whichTeam, true))));
     const gamesPlayed = (result.matchPlayer.tossupsHeard ?? 0) / (result.match.tossupsRead ?? 0);
-    cells.push(numericCell(forf ? '' : gamesPlayed.toFixed(1)));
+    // no tossups-read value gives Infinity or NaN
+    const gpStr = Number.isFinite(gamesPlayed) ? gamesPlayed.toFixed(1) : mDashHtml;
+    cells.push(numericCell(forf ? '' : gpStr));
 
     this.tournament.scoringRules.answerTypes.forEach((at) => {
       if (forf) {
@@ -1087,13 +1093,24 @@ export default class HtmlReportGenerator {
   }
 
   private teamDetailLink(team: Team, dontTruncate?: boolean) {
-    const href = `${this.fileNameForLink(StatReportPages.TeamDetails)}#${teamDetailLinkId(team)}`;
+    const href = `${this.fileNameForLink(StatReportPages.TeamDetails)}#${this.teamDetailLinkId(team)}`;
     return aTag(href, dontTruncate ? team.name : team.getTruncatedName());
   }
 
   private playerDetailLink(player: Player, team: Team) {
-    const href = `${this.fileNameForLink(StatReportPages.PlayerDetails)}#${playerDetailLinkId(player, team)}`;
+    const href = `${this.fileNameForLink(StatReportPages.PlayerDetails)}#${this.playerDetailLinkId(player, team)}`;
     return aTag(href, player.name);
+  }
+
+  /** Anchor for a team on Team Detail. Names that only differ in punctuation (e.g. "St. Mary's" and
+   *  "St Marys") would share one, so the second and later get "-2", "-3"... */
+  private teamDetailLinkId(team: Team) {
+    return uniqueAnchor(team, this.tournament.getListOfAllTeams(), (tm) => tm.name);
+  }
+
+  /** Anchor for a player on Player Detail, made unique within the team the same way */
+  private playerDetailLinkId(player: Player, team: Team) {
+    return `${this.teamDetailLinkId(team)}-${uniqueAnchor(player, team.players, (pl) => pl.name)}`;
   }
 
   private fileNameForLink(page: StatReportPages) {
@@ -1208,12 +1225,12 @@ function matchLinkId(match: Match) {
   return match.id;
 }
 
-function teamDetailLinkId(team: Team) {
-  return alphaOnly(team.name);
-}
-
-function playerDetailLinkId(player: Player, team: Team) {
-  return `${alphaOnly(team.name)}-${alphaOnly(player.name)}`;
+/** alphaOnly(name), plus "-n" for the nth item in the list with the same alphaOnly(name) */
+function uniqueAnchor<T>(item: T, all: T[], name: (x: T) => string) {
+  const base = alphaOnly(name(item));
+  const same = all.filter((x) => alphaOnly(name(x)) === base);
+  const n = same.indexOf(item) + 1;
+  return n > 1 ? `${base}-${n}` : base;
 }
 
 function alphaOnly(str: string) {
